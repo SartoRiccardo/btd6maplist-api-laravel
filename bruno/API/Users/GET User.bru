@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "name": "GET User",
+    "type": "http",
+    "seq": 1
+  },
+  "http": {
+    "method": "GET",
+    "url": "{{BASE_URL}}/users/{{userId}}",
+    "auth": {
+      "type": "none"
+    },
+    "body": {
+      "mimeType": "No Body"
+    },
+    "params": [
+      {
+        "name": "minimal",
+        "value": "{{minimal}}",
+        "disabled": false
+      }
+    ]
+  },
+  "params": [
+    {
+      "name": "userId",
+      "value": "2000000",
+      "type": "text"
+    },
+    {
+      "name": "minimal",
+      "value": "false",
+      "type": "text"
+    }
+  ]
+}

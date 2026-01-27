@@ -5,6 +5,7 @@ namespace App\Services\Discord;
 class DiscordApiClient
 {
     protected static ?array $fakeProfile = null;
+    protected static bool $fakeFailure = false;
 
     /**
      * Validate Discord token and get user profile.
@@ -13,6 +14,10 @@ class DiscordApiClient
      */
     public static function getUserProfile(string $token): array
     {
+        if (self::$fakeFailure) {
+            throw new \RuntimeException('Invalid Discord token', 401);
+        }
+
         if (self::$fakeProfile !== null) {
             return self::$fakeProfile;
         }
@@ -35,6 +40,16 @@ class DiscordApiClient
     public static function fake(array $profile): void
     {
         self::$fakeProfile = $profile;
+        self::$fakeFailure = false;
+    }
+
+    /**
+     * Fake the Discord API returning a failure.
+     */
+    public static function fakeFailure(): void
+    {
+        self::$fakeFailure = true;
+        self::$fakeProfile = null;
     }
 
     /**
@@ -43,5 +58,6 @@ class DiscordApiClient
     public static function clearFake(): void
     {
         self::$fakeProfile = null;
+        self::$fakeFailure = false;
     }
 }

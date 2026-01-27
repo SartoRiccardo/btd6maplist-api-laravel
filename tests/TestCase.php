@@ -83,4 +83,17 @@ abstract class TestCase extends BaseTestCase
         $this->assertEquals($expectedKeys, $actualKeys);
     }
 
+    /**
+     * Clean up after each test.
+     * Resets all API client fakes to prevent state leakage between tests.
+     */
+    protected function tearDown(): void
+    {
+        // Clean up all API client fakes to prevent state leakage
+        \App\Services\Discord\DiscordApiClient::clearFake();
+        \App\Services\NinjaKiwi\NinjaKiwiApiClient::clearFake();
+
+        parent::tearDown();
+    }
+
 }

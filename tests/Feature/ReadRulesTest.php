@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Discord\DiscordApiClient;
 use Tests\TestCase;
+use Tests\Traits\TestsDiscordAuthMiddleware;
 
 /**
  * Test reading the rules one or more times.
@@ -12,22 +13,33 @@ use Tests\TestCase;
  */
 class ReadRulesTest extends TestCase
 {
-
-    private const USER_ID = 2000000;
-    private const USERNAME = 'test_new_usr';
-    private const FAKE_TOKEN = 'fake_discord_token';
+    use TestsDiscordAuthMiddleware;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Fake the Discord API for all tests (static method, just like Http::fake())
         DiscordApiClient::fake([
-            'id' => (string) self::USER_ID,
+            'id' => self::USER_ID,
             'username' => self::USERNAME,
-            'avatar' => '31eb929ef84cce316fa9be34fc9b1c5b',
-            'global_name' => 'Test User',
+            'discriminator' => '0000',
+            'avatar' => null,
         ]);
+    }
+
+    protected function endpoint(): string
+    {
+        return '/api/read-rules';
+    }
+
+    protected function method(): string
+    {
+        return 'PUT';
+    }
+
+    protected function expectedSuccessStatusCode(): int
+    {
+        return 204;
     }
 
     /**
@@ -90,3 +102,4 @@ class ReadRulesTest extends TestCase
         $this->assertEquals($expectedSecondProfile, $thirdProfile);
     }
 }
+
