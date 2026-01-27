@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'discord.auth' => \App\Http\Middleware\ValidateDiscordToken::class,
+            'discord.register' => \App\Http\Middleware\RegisterDiscordUser::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

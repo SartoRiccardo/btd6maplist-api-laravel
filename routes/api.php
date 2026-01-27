@@ -1,8 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::post('/auth', [AuthController::class, 'authenticate'])
+    ->middleware(['discord.auth', 'discord.register']);
+
+Route::put('/read-rules', [AuthController::class, 'readRules'])
+    ->middleware(['discord.auth', 'discord.register']);
