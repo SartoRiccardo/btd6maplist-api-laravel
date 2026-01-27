@@ -1,0 +1,25 @@
+name: btd6maplist-api-v2
+
+services:
+    postgres:
+        image: postgres:16
+        container_name: btd6maplist-api-v2-postgres
+        volumes:
+            - ./pgdata:/data/postgres
+        ports:
+            - 5432:5432
+        environment:
+            POSTGRES_USER: btd6maplist
+            POSTGRES_PASSWORD: btd6maplist
+            PGDATA: /data/postgres
+            POSTGRES_DB: btd6maplist
+    postgres-test:
+        image: postgres:16
+        container_name: btd6maplist-api-v2-postgres-test
+        ports:
+            - 5433:5432
+        environment:
+            POSTGRES_USER: btd6maplist-test
+            POSTGRES_PASSWORD: btd6maplist-test
+            PGDATA: /data/postgres
+            POSTGRES_DB: btd6maplist-test
