@@ -35,7 +35,7 @@ DIFFICULTY:
 - [x] 🟢 GET /formats
 - [ ] 🟡 GET /formats/{id}
 - [ ] 🟡 PUT /formats/{id}
-- [ ] 🟢 GET 🤖 /formats
+- [ ] ❓ GET 🤖 /formats
 
 ## Config Endpoints
 
@@ -72,7 +72,7 @@ DIFFICULTY:
 ## Users Endpoints
 
 - [x] 🟢 PUT /read-rules
-- [ ] 🟢 PUT 🤖 /read-rules
+- [ ] ❓ PUT 🤖 /read-rules
 - [ ] ❓ GET /search
 - [ ] ❓ GET /img/medal-banner/{banner}
 - [ ] ❓ PUT /users/@me
