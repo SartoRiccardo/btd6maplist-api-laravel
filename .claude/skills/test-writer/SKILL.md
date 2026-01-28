@@ -41,9 +41,10 @@ If I am `the.superuser@company.com`, for example, you should turn the comment in
 public function test_some_behavior(): void
 ```
 
-## Base tests classes and WithTransaction trait
+## Base tests classes traits
 
-- Base test classes should inherit the `Tests\TransactionalTestCase` base class. This provides utility in speeding up tests.
+- Study very well the base class @tests/TestCase.php as there are many useful helper methods you can use in all tests.
+- The traits in @tests/Traits package lots of useful pre-made tests you can inject in any route. This is useful, for example, to automatically test authentication on a route. You should get to know what's in that folder!
 
 ## Test Coding and Assertion Style
 
@@ -69,26 +70,40 @@ Always verify with GET requests, never query database directly:
 
 ```php
 // Create/update something
-$createResponse = $this->actingAs($admin, 'api')
-    ->postJson('/api/v1/oauth2/apps', $payload)
-    ->assertStatus(201)
-    ->json();
+$format = Format::factory()->create();
+$user = $this->createUserWithPermissions([$format->id => ['edit:config']]);
+
+$payload = [
+    ...$this->requestData(),
+    'hidden' => true,
+    'run_submission_status' => 'lcc_only',
+    'map_submission_status' => 'open_chimps',
+    'map_submission_wh' => fake()->url(),
+    'run_submission_wh' => fake()->url(),
+    'emoji' => fake()->emoji(),
+];
+
+$this->actingAs($user, 'discord')
+    ->putJson('/api/formats/' . $format->id, $payload)
+    ->assertStatus(204);
 
 // Verify with GET
-$actual = $this->actingAs($admin, 'api')
-    ->getJson('/api/v1/oauth2/apps/' . $createResponse['id'])
+$actual = $this->actingAs($user, 'discord')
+    ->getJson('/api/formats/' . $format->id)
     ->assertStatus(200)
     ->json();
 
-// Assert with assertEquals
-JsonStructures::removeKeysRecursive($actual, ['id', 'created_at', 'updated_at']);
-$expected = JsonStructures::oauth2App($payload, true, ['id', 'created_at', 'updated_at']);
+$expected = Format::jsonStructure([
+    ...$format->toArray(),
+    ...$payload,
+], strict: false);
+
 $this->assertEquals($expected, $actual);
 ```
 
 ### Final Assertion
 
-Always use `->assertEquals($expected, $actual)` for final assertion. For non-deterministic values (IDs, timestamps), use `JsonStructures::removeKeysRecursive()`. For response schemas, use `JsonStructures::{resourceName}()` helpers.
+Always use `->assertEquals($expected, $actual)` for final assertion. Use the model's `jsonStructure()` method from the TestableStructure trait to craft response schemas. Combine model data and payload using spread operator: `[...$model->toArray(), ...$payload]`. Use `strict: false` to ignore extra keys from defaults().
 
 ### Factory Usage
 
@@ -114,4 +129,8 @@ $app = OAuth2App::factory()->create(['name' => $specificName]);
 ```
 
 - As most of the tests we write are Integration Tests, assertions must happen with calls to GET requests and checking the response, **never** by fetching directly in the database.
-- Assertions must, most of the time, happen with a single `->assertEquals` call. You will have to use the `JsonStructures` helper class to craft correct response schemas. In those methods, you can even dump a whole model after creating it with a factory and calling the `->toArray` method on it.
+- Assertions must, most of the time, happen with a single `->assertEquals` call. Use the model's `jsonStructure()` method (from TestableStructure trait) to craft correct response schemas. Combine the model's array representation with your payload using spread operator: `[...$model->toArray(), ...$payload]`.
+
+## Existing Tests
+
+You may look at existing tests to know the code style and patterns we currently use. Some good example tests can be found in @tests/Feature/Formats
