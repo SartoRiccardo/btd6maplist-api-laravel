@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Constants\FormatConstants;
 use App\Casts\MapSubmissionStatusCast;
 use App\Casts\RunSubmissionStatusCast;
+use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Format extends Model
 {
-    use HasFactory;
+    use HasFactory, TestableStructure;
 
     public $timestamps = false;
 
@@ -79,5 +80,32 @@ class Format extends Model
     public function formatRulesSubsets()
     {
         return $this->belongsToMany(Format::class, 'formats_rules_subsets', 'format_parent', 'format_child');
+    }
+
+    // -- TestableStructure -- //
+
+    protected static function defaults(array $overrides = []): array
+    {
+        return array_merge([
+            'id' => 0,
+            'name' => 'Test Format',
+            'hidden' => false,
+            'map_submission_status' => 'open',
+            'run_submission_status' => 'open',
+            'proposed_difficulties' => null,
+        ], $overrides);
+    }
+
+    protected static function strictFields(): array
+    {
+        return [
+            'id',
+            'name',
+            'hidden',
+            'map_submission_status',
+            'run_submission_status',
+            'proposed_difficulties',
+
+        ];
     }
 }

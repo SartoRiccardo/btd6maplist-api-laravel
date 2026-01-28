@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Format;
 use Database\Seeders\DatabaseSeeder;
 use PHPUnit\Attributes\Group;
 use Tests\TestCase;
@@ -27,31 +28,31 @@ class FormatTest extends TestCase
             ->json();
 
         $expected = [
-            [
+            Format::jsonStructure([
                 'id' => 1,
                 'name' => 'Maplist',
                 'hidden' => false,
                 'map_submission_status' => 'open_chimps',
                 'run_submission_status' => 'open',
                 'proposed_difficulties' => ['Top 3', 'Top 10', '#11 ~ 20', '#21 ~ 30', '#31 ~ 40', '#41 ~ 50'],
-            ],
-            [
+            ]),
+            Format::jsonStructure([
                 'id' => 2,
                 'name' => 'Maplist (all versions)',
                 'hidden' => true,
                 'map_submission_status' => 'closed',
                 'run_submission_status' => 'closed',
                 'proposed_difficulties' => ['Top 3', 'Top 10', '#11 ~ 20', '#21 ~ 30', '#31 ~ 40', '#41 ~ 50'],
-            ],
-            [
+            ]),
+            Format::jsonStructure([
                 'id' => 11,
                 'name' => 'Nostalgia Pack',
                 'hidden' => false,
                 'map_submission_status' => 'open',
                 'run_submission_status' => 'lcc_only',
                 'proposed_difficulties' => null,
-            ],
-            [
+            ]),
+            Format::jsonStructure([
                 'id' => 51,
                 'name' => 'Expert List',
                 'hidden' => false,
@@ -68,15 +69,15 @@ class FormatTest extends TestCase
                     'True/Extreme Expert',
                     'Extreme Expert',
                 ],
-            ],
-            [
+            ]),
+            Format::jsonStructure([
                 'id' => 52,
                 'name' => 'Best of the Best',
                 'hidden' => false,
                 'map_submission_status' => 'closed',
                 'run_submission_status' => 'open',
                 'proposed_difficulties' => ['Beginner', 'Intermediate', 'Advanced', 'Expert/Extreme'],
-            ],
+            ]),
         ];
 
         $this->assertEquals($expected, $actual);
