@@ -76,4 +76,4 @@ script:post-response {
 
 The current project is being REWRITTEN in Laravel from a Python codebase in a custom framework. You may find this project at ~/w/btd6maplist/api
 
-The database schema is FULLY IMPORTED, you are FORBIDDEN from creating any migrations until we achiveve 100% feature and test parity.
+The database schema is FULLY IMPORTED, you are FORBIDDEN from creating any migrations until we achiveve 100% feature and test parity. Read pgsql-schema.sql and the tools if you have any doubts on what exists and what doesn't in the database. Never query the database directly.
