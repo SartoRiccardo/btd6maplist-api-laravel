@@ -71,3 +71,9 @@ script:post-response {
   }
 }
 ```
+
+# **IMPORTANT:** Current, most important Task
+
+The current project is being REWRITTEN in Laravel from a Python codebase in a custom framework. You may find this project at ~/w/btd6maplist/api
+
+The database schema is FULLY IMPORTED, you are FORBIDDEN from creating any migrations until we achiveve 100% feature and test parity.
