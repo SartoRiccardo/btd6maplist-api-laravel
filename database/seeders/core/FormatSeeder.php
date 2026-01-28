@@ -49,7 +49,7 @@ class FormatSeeder extends Seeder
         foreach (self::$formats as $id => $format) {
             Format::updateOrCreate(
                 ['id' => $id],
-                array_merge(['id' => $id], $format)
+                $format
             );
         }
     }

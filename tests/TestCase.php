@@ -31,7 +31,7 @@ abstract class TestCase extends BaseTestCase
                 \Log::info('Starting database refresh for test: ' . static::class);
                 Artisan::call('migrate:fresh');
                 \Log::info('Seeding database for test: ' . static::class);
-                // $this->seed(\Database\Seeders\DatabaseSeeder::class);
+                $this->seed(\Database\Seeders\DatabaseSeeder::class);
                 \Log::info('Finished seeding database for test: ' . static::class);
             } else {
                 \Log::info('Database already at latest migration, skipping refresh for test: ' . static::class);
