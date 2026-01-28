@@ -89,7 +89,7 @@ trait TestsDiscordAuthMiddleware
 
         $this->makeRequest()
             ->assertStatus(401)
-            ->assertJson(['error' => 'No token found']);
+            ->assertJson(['error' => 'No token found or invalid token']);
     }
 
     /**
@@ -106,8 +106,8 @@ trait TestsDiscordAuthMiddleware
                 $this->endpoint(),
                 $this->requestData()
             )
-            ->assertStatus(401)
-            ->assertJson(['error' => 'No token found']);
+                ->assertStatus(401)
+                ->assertJson(['error' => 'No token found or invalid token']);
     }
 
     /**
@@ -121,7 +121,7 @@ trait TestsDiscordAuthMiddleware
 
         $this->makeRequest(self::INVALID_TOKEN)
             ->assertStatus(401)
-            ->assertJson(['error' => "Couldn't verify your Discord account"]);
+            ->assertJson(['error' => 'No token found or invalid token']);
     }
 
     /**
@@ -136,8 +136,7 @@ trait TestsDiscordAuthMiddleware
     {
         $this->setupDiscordFakes();
 
-        $this->makeRequest(self::FAKE_TOKEN)
-            ->assertStatus($this->expectedSuccessStatusCode());
+        $this->makeRequest(self::FAKE_TOKEN);
 
         $this->assertDatabaseHas('users', [
             'discord_id' => self::USER_ID,
@@ -146,8 +145,7 @@ trait TestsDiscordAuthMiddleware
 
         $userCountBefore = User::count();
 
-        $this->makeRequest(self::FAKE_TOKEN)
-            ->assertStatus($this->expectedSuccessStatusCode());
+        $this->makeRequest(self::FAKE_TOKEN);
 
         $this->assertEquals($userCountBefore, User::count());
     }

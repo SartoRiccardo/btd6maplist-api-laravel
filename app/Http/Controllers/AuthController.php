@@ -28,7 +28,7 @@ class AuthController extends Controller
      */
     public function authenticate(Request $request): JsonResponse
     {
-        $user = $request->attributes->get('authenticated_user');
+        $user = auth()->guard('discord')->user();
 
         return response()->json($user->toArray());
     }
@@ -48,7 +48,7 @@ class AuthController extends Controller
      */
     public function readRules(Request $request): Response
     {
-        $user = $request->attributes->get('authenticated_user');
+        $user = auth()->guard('discord')->user();
 
         $user->has_seen_popup = true;
         $user->save();

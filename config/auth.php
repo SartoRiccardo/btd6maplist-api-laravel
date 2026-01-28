@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'discord' => [
+            'driver' => 'discord',
+            'provider' => 'users',
+        ],
     ],
 
     /*

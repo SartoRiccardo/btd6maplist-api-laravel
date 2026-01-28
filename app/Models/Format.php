@@ -21,6 +21,19 @@ use Illuminate\Database\Eloquent\Model;
  *     @OA\Property(property="proposed_difficulties", type="array", items={ "type"="string" }, nullable=true, description="What difficulties can be proposed by map submitters")
  * )
  */
+/**
+ * @OA\Schema(
+ *     schema="FullFormat",
+ *     allOf={
+ *         @OA\Schema(ref="#/components/schemas/Format"),
+ *         @OA\Schema(
+ *             @OA\Property(property="map_submission_wh", type="string", nullable=true, description="Discord webhook URL for map submissions"),
+ *             @OA\Property(property="run_submission_wh", type="string", nullable=true, description="Discord webhook URL for run submissions"),
+ *             @OA\Property(property="emoji", type="string", nullable=true, description="Discord emoji for the format")
+ *         )
+ *     }
+ * )
+ */
 class Format extends Model
 {
     use HasFactory, TestableStructure;
@@ -82,6 +95,19 @@ class Format extends Model
         return $this->belongsToMany(Format::class, 'formats_rules_subsets', 'format_parent', 'format_child');
     }
 
+    /**
+     * Get full format representation including sensitive fields (webhooks, emoji).
+     */
+    public function toFullArray(): array
+    {
+        return [
+            ...$this->toArray(),
+            'map_submission_wh' => $this->map_submission_wh,
+            'run_submission_wh' => $this->run_submission_wh,
+            'emoji' => $this->emoji,
+        ];
+    }
+
     // -- TestableStructure -- //
 
     protected static function defaults(array $overrides = []): array
@@ -93,6 +119,9 @@ class Format extends Model
             'map_submission_status' => 'open',
             'run_submission_status' => 'open',
             'proposed_difficulties' => null,
+            'map_submission_wh' => null,
+            'run_submission_wh' => null,
+            'emoji' => null,
         ], $overrides);
     }
 
@@ -105,7 +134,9 @@ class Format extends Model
             'map_submission_status',
             'run_submission_status',
             'proposed_difficulties',
-
+            'map_submission_wh',
+            'run_submission_wh',
+            'emoji',
         ];
     }
 }

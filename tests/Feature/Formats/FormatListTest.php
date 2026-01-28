@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Formats;
 
 use App\Models\Format;
 use Database\Seeders\DatabaseSeeder;
@@ -12,7 +12,7 @@ use Tests\TestCase;
  *
  * @author rikki.sarto@gmail.com
  */
-class FormatTest extends TestCase
+class FormatListTest extends TestCase
 {
     protected function setUp(): void
     {
@@ -35,7 +35,7 @@ class FormatTest extends TestCase
                 'map_submission_status' => 'open_chimps',
                 'run_submission_status' => 'open',
                 'proposed_difficulties' => ['Top 3', 'Top 10', '#11 ~ 20', '#21 ~ 30', '#31 ~ 40', '#41 ~ 50'],
-            ]),
+            ], exclude: ['map_submission_wh', 'run_submission_wh', 'emoji']),
             Format::jsonStructure([
                 'id' => 2,
                 'name' => 'Maplist (all versions)',
@@ -43,7 +43,7 @@ class FormatTest extends TestCase
                 'map_submission_status' => 'closed',
                 'run_submission_status' => 'closed',
                 'proposed_difficulties' => ['Top 3', 'Top 10', '#11 ~ 20', '#21 ~ 30', '#31 ~ 40', '#41 ~ 50'],
-            ]),
+            ], exclude: ['map_submission_wh', 'run_submission_wh', 'emoji']),
             Format::jsonStructure([
                 'id' => 11,
                 'name' => 'Nostalgia Pack',
@@ -51,7 +51,7 @@ class FormatTest extends TestCase
                 'map_submission_status' => 'open',
                 'run_submission_status' => 'lcc_only',
                 'proposed_difficulties' => null,
-            ]),
+            ], exclude: ['map_submission_wh', 'run_submission_wh', 'emoji']),
             Format::jsonStructure([
                 'id' => 51,
                 'name' => 'Expert List',
@@ -69,7 +69,7 @@ class FormatTest extends TestCase
                     'True/Extreme Expert',
                     'Extreme Expert',
                 ],
-            ]),
+            ], exclude: ['map_submission_wh', 'run_submission_wh', 'emoji']),
             Format::jsonStructure([
                 'id' => 52,
                 'name' => 'Best of the Best',
@@ -77,7 +77,7 @@ class FormatTest extends TestCase
                 'map_submission_status' => 'closed',
                 'run_submission_status' => 'open',
                 'proposed_difficulties' => ['Beginner', 'Intermediate', 'Advanced', 'Expert/Extreme'],
-            ]),
+            ], exclude: ['map_submission_wh', 'run_submission_wh', 'emoji']),
         ];
 
         $this->assertEquals($expected, $actual);

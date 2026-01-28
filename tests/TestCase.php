@@ -2,6 +2,9 @@
 
 namespace Tests;
 
+use App\Models\Role;
+use App\Models\RoleFormatPermission;
+use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -94,6 +97,31 @@ abstract class TestCase extends BaseTestCase
         \App\Services\NinjaKiwi\NinjaKiwiApiClient::clearFake();
 
         parent::tearDown();
+    }
+
+    /**
+     * Create a user with specific format permissions.
+     *
+     * @param array $permissions Array of [format_id => ['perm1', 'perm2'], null => ['global_perm']]
+     *                              format_id can be an integer or null (for global permissions)
+     * @return User
+     */
+    protected function createUserWithPermissions(array $permissions): User
+    {
+        $user = User::factory()->create();
+        $role = Role::factory()->create();
+        $user->roles()->attach($role->id);
+
+        foreach ($permissions as $formatId => $perms) {
+            foreach ($perms as $permission) {
+                RoleFormatPermission::factory()
+                    ->for($role)
+                    ->permission($permission, $formatId)
+                    ->create();
+            }
+        }
+
+        return $user;
     }
 
 }

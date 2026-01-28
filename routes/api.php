@@ -5,9 +5,16 @@ use App\Http\Controllers\FormatController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth', [AuthController::class, 'authenticate'])
-    ->middleware(['discord.auth', 'discord.register']);
+    ->middleware('discord.auth');
 
 Route::put('/read-rules', [AuthController::class, 'readRules'])
-    ->middleware(['discord.auth', 'discord.register']);
+    ->middleware('discord.auth');
 
-Route::get('/formats', [FormatController::class, 'index']);
+Route::prefix('formats')->group(function () {
+    Route::get('/', [FormatController::class, 'index']);
+
+    Route::middleware('discord.auth')->group(function () {
+        Route::get('/{id}', [FormatController::class, 'show']);
+        Route::put('/{id}', [FormatController::class, 'update']);
+    });
+});

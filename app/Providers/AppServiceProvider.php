@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Auth\DiscordGuard;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Auth::extend('discord', function ($app, $name, array $config) {
+            return new DiscordGuard(
+                Auth::createUserProvider($config['provider'] ?? null),
+                $app->make('request')
+            );
+        });
     }
 }

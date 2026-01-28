@@ -78,6 +78,41 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has a specific permission, optionally for a specific format.
+     * A permission applies if it's granted globally (format_id = null) or for the specific format.
+     */
+    public function hasPermission(string $permission, ?int $formatId = null): bool
+    {
+        return $this->roles()
+            ->whereHas('formatPermissions', function ($query) use ($permission, $formatId) {
+                $query->where('permission', $permission)
+                    ->where(function ($q) use ($formatId) {
+                        $q->where('format_id', $formatId)
+                            ->orWhereNull('format_id');
+                    });
+            })
+            ->exists();
+    }
+
+    /**
+     * Get the user's permissions accessor.
+     */
+    protected function getPermissionsAttribute(): array
+    {
+        return $this->roles()
+            ->with('formatPermissions')
+            ->get()
+            ->pluck('formatPermissions')
+            ->flatten()
+            ->filter(fn($perm) => $perm->permission !== null)
+            ->map(fn($perm) => [
+                'permission' => $perm->permission,
+                'format_id' => $perm->format_id,
+            ])
+            ->toArray();
+    }
+
+    /**
      * Get the user's completions.
      */
     public function completions(): HasMany
@@ -96,7 +131,7 @@ class User extends Authenticatable
             'oak' => $this->nk_oak,
             'has_seen_popup' => $this->has_seen_popup,
             'is_banned' => $this->is_banned,
-            'permissions' => $this->permissions ?? [], // TODO: implement
+            'permissions' => $this->permissions,
             'roles' => $this->relationLoaded('roles') ? $this->roles->toArray() : [],
             'completions' => $this->relationLoaded('completions') ? $this->completions->toArray() : [],
         ];
