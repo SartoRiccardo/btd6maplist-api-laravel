@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "name": "PUT Edit Format",
+    "type": "http",
+    "seq": 3
+  },
+  "http": {
+    "method": "PUT",
+    "url": "{{BASE_URL}}/formats/1",
+    "auth": {
+      "type": "bearer",
+      "token": "{{USER_AUTH_TOKEN}}"
+    },
+    "body": {
+      "mimeType": "application/json",
+      "text": "{\n  \"hidden\": false,\n  \"run_submission_status\": \"open\",\n  \"map_submission_status\": \"open_chimps\",\n  \"map_submission_wh\": \"https://discord.com/api/webhooks/123/abc\",\n  \"run_submission_wh\": \"https://discord.com/api/webhooks/456/def\",\n  \"emoji\": \"🗺️\"\n}"
+    }
+  }
+}
