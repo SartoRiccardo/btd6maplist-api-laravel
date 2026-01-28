@@ -23,6 +23,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Docker
 pgdata
 
+# Private
+old-api
+
+# Robots
 CLAUDE.md
