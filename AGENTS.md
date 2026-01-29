@@ -52,7 +52,7 @@ Routes should be documented with an OpenAPI compliant docstring.
 
 ### Bruno Requests
 
-This project uses Bruno as a helper tool for developer UX. You can create routes for it in the `bruno/API` folder.
+This project uses Bruno as a helper tool for developer UX. You can create routes for it in the `bruno/BTD6 Maplist API` folder.
 
 - Group requests semantically in a sub-folder.
 - Do not create tests for the routes, despite Bruno supporting it.

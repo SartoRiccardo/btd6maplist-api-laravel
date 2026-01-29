@@ -95,6 +95,25 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all format IDs where the user has a specific permission.
+     *
+     * @return array<int> Array of format IDs
+     */
+    public function formatsWithPermission(string $permission): array
+    {
+        return $this->roles()
+            ->with('formatPermissions')
+            ->whereHas('formatPermissions', function ($query) use ($permission) {
+                $query->where('permission', $permission);
+            })
+            ->get()
+            ->pluck('formatPermissions.*.format_id')
+            ->unique()
+            ->flatten()
+            ->toArray();
+    }
+
+    /**
      * Get the user's permissions accessor.
      */
     protected function getPermissionsAttribute(): array

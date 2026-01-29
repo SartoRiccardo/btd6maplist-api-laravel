@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,15 +13,11 @@ Route::put('/read-rules', [AuthController::class, 'readRules'])
     ->middleware('discord.auth');
 
 // Config endpoints
-/**
- * 🟢 Easy: Simple key-value query
- */
-Route::get('/config', fn() => response()->noContent(501));
-
-/**
- * 🟡 Medium: Permission check + validation + update specific config key
- */
-Route::put('/config/{key}', fn() => response()->noContent(501));
+Route::prefix('config')->group(function () {
+    Route::get('/', [ConfigController::class, 'index']);
+    Route::put('/', [ConfigController::class, 'update'])
+        ->middleware('discord.auth');
+});
 
 // Formats endpoints
 Route::prefix('formats')->group(function () {
