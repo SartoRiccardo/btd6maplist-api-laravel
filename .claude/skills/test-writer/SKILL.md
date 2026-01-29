@@ -107,6 +107,28 @@ Always use `->assertEquals($expected, $actual)` for final assertion. Use the mod
 
 ### Factory Usage
 
+**Only set values you actually assert against.** Let the factory handle all defaults.
+
+```php
+// BAD - Setting too many values that aren't tested
+Config::factory()->create([
+    'name' => 'points_top_map',
+    'value' => '100.0',
+    'type' => 'float',
+    'description' => 'Points for the #1 map',  // Not asserted against!
+    'difficulty' => null,                       // Not asserted against!
+]);
+
+// GOOD - Only what matters for the test
+Config::factory()->type('float')->forFormats([1])->create(['value' => '100.0']);
+// Then assert: assertEquals(100.0, $actual['points_top_map']['value']);
+```
+
+This makes tests:
+- **More readable** - the test data tells you what's being tested
+- **More maintainable** - factory changes don't break your tests
+- **More focused** - each test cares about its specific scenario
+
 ```php
 // Single model
 $app = OAuth2App::factory()->create();
