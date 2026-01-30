@@ -138,18 +138,17 @@ Route::get('/server-roles', fn() => response()->noContent(501));
 // Completions endpoints
 Route::prefix('completions')->group(function () {
     Route::get('/recent', [CompletionController::class, 'recent']);
-    Route::get('/unapproved', [CompletionController::class, 'unapproved'])
-        ->middleware('discord.auth');
+    Route::get('/{cid}', [CompletionController::class, 'show']);
 
-    Route::prefix('{cid}')->group(function () {
-        Route::get('/', [CompletionController::class, 'show']);
-        Route::put('/', [CompletionController::class, 'update'])
-            ->middleware('discord.auth');
-        Route::put('/accept', [CompletionController::class, 'accept'])
-            ->middleware('discord.auth');
-        Route::delete('/', [CompletionController::class, 'destroy'])
-            ->middleware('discord.auth');
-    });
+    Route::middleware('discord.auth')
+        ->group(function () {
+            Route::get('/unapproved', [CompletionController::class, 'unapproved']);
+
+            Route::put('/{cid}', [CompletionController::class, 'update']);
+            Route::delete('/{cid}', [CompletionController::class, 'destroy']);
+
+            Route::put('/{cid}/accept', [CompletionController::class, 'accept']);
+        });
 });
 
 // Roles endpoints
