@@ -1,0 +1,15 @@
+meta {
+  name: DELETE Completion
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{BASE_URL}}/completions/17
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{USER_AUTH_TOKEN}}
+}

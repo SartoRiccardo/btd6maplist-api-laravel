@@ -1,0 +1,28 @@
+meta {
+  name: PUT Completion
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{BASE_URL}}/completions/1
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{USER_AUTH_TOKEN}}
+}
+
+body:json {
+  {
+    "user_ids": ["1"],
+    "format": 1,
+    "black_border": false,
+    "no_geraldo": false,
+    "lcc": {
+      "leftover": 5000
+    },
+    "subm_notes": "Updated completion notes"
+  }
+}
