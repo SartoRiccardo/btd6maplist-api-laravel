@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\AchievementRoleController;
 use Illuminate\Support\Facades\Route;
 
 // Auth endpoints
@@ -169,20 +171,14 @@ Route::prefix('completions')->group(function () {
 
 // Roles endpoints
 Route::prefix('roles')->group(function () {
-    /**
-     * 🟢 Easy: Simple database query
-     */
-    Route::get('/', fn() => response()->noContent(501));
+    Route::get('/', [RoleController::class, 'index']);
+});
 
-    /**
-     * 🟢 Easy: Simple database query
-     */
-    Route::get('/achievement', fn() => response()->noContent(501));
-
-    /**
-     * 🟡 Medium: Validation + database update + complex response handling
-     */
-    Route::put('/achievement', fn() => response()->noContent(501));
+// Achievement roles endpoints
+Route::prefix('roles/achievement')->group(function () {
+    Route::get('/', [AchievementRoleController::class, 'index']);
+    Route::put('/', [AchievementRoleController::class, 'update'])
+        ->middleware('discord.auth');
 });
 
 // Users endpoints

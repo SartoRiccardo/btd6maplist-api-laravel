@@ -1,0 +1,28 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\AchievementRole;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\AchievementRole>
+ */
+class AchievementRoleFactory extends Factory
+{
+    protected $model = AchievementRole::class;
+
+    public function definition(): array
+    {
+        return [
+            'lb_format' => 1,
+            'lb_type' => 'points',
+            'threshold' => fake()->numberBetween(1, 1000),
+            'for_first' => false,
+            'tooltip_description' => fake()->optional()->sentence(),
+            'name' => fake()->words(2, true),
+            'clr_border' => fake()->numberBetween(0, 0xFFFFFF),
+            'clr_inner' => fake()->numberBetween(0, 0xFFFFFF),
+        ];
+    }
+}

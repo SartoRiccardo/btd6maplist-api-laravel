@@ -80,8 +80,6 @@ trait TestsDiscordAuthMiddleware
 
     /**
      * Test calling the endpoint with no Authorization header returns 401.
-     *
-     * @author rikki.sarto@gmail.com
      */
     public function test_no_bearer_token_returns_401(): void
     {
@@ -94,8 +92,6 @@ trait TestsDiscordAuthMiddleware
 
     /**
      * Test calling the endpoint with malformed Bearer token returns 401.
-     *
-     * @author rikki.sarto@gmail.com
      */
     public function test_malformed_bearer_token_returns_401(): void
     {
@@ -112,8 +108,6 @@ trait TestsDiscordAuthMiddleware
 
     /**
      * Test calling the endpoint with an invalid Discord token returns 401.
-     *
-     * @author rikki.sarto@gmail.com
      */
     public function test_invalid_discord_token_returns_401(): void
     {
@@ -129,8 +123,6 @@ trait TestsDiscordAuthMiddleware
      * Verifies that:
      * - First request creates the user in the database
      * - Second request does not create a duplicate user
-     *
-     * @author rikki.sarto@gmail.com
      */
     public function test_valid_token_creates_user(): void
     {

@@ -7,38 +7,26 @@ description: Writes tests with the appropriate coding style. Use when you need t
 
 - To create tests, create them first with `php artisan make:test`.
     - You **do not** include `Feature/` when running this command. They are by default Feature tests and go in that directory.
+    - **IMPORTANT:** Use PHP 8+ attributes for test metadata, NOT doc-comments. Use `#[Group('get')]`, `#[Group('post')]`, etc. instead of `@test` or `@group` annotations in doc-comments.
 - When you create seeders for test purposes, located in `seeders/test`, comment in a docstring exactly which tests they are used in. You need to specify the test's path and name (if used in every test of that file) and, optionally, the exact test name (mandatory if used in only one of the tests).
 - If you only use an entity on a single test, create it in the test itself instead of using a seeder, using its model.
 - Be meticuous when checking return values. Use AssertableJSON validators, and check the exact number of keys.
 - To run tests, you can use `php artisan test --stop-on-failure`. You can also use the `--group` flag to select specific groups.
-- You **must** mark tests by which http methods they are testing. for example, `@group post` in the comment.
-- You **must** assert responses with the `->assertEquals` assertion. For non-deterministic values, such as IDs or timestamps, unset them before finally performing the `->assertEquals` assertion.
 
-**Important**
+**Test Grouping (IMPORTANT):**
 
-- When you create or modify a test, create a comment for the test where you document what it does and add the identity of The Superuser (obtainable via `git config user.email`) in the comment. This way, future editors know who created the test and who they should ask to if one of them breaks. A good comment should look like the following:
+- You **must** mark tests by which http methods they are testing using PHP 8 attributes: `#[Group('get')]`, `#[Group('post')]`, `#[Group('put')]`, `#[Group('patch')]`, `#[Group('delete')]`, etc.
+- Place the attribute directly above the test method, NOT in a doc-comment
+- **DO NOT** use `@test`, `@group`, or any other PHPUnit annotations in doc-comments - these are deprecated and will be removed in PHPUnit 12
 
-```php
-/**
- * Test getting an OAuth2 service successfully.
- *
- * @author some.guy@company.com
- * @author some.otherguy@company.com
- */
-public function test_some_behavior(): void
-```
-
-If I am `the.superuser@company.com`, for example, you should turn the comment into the following:
+Example:
 
 ```php
-/**
- * Test getting an OAuth2 service successfully.
- *
- * @author some.guy@company.com
- * @author some.otherguy@company.com
- * @author the.superuser@company.com
- */
-public function test_some_behavior(): void
+#[Group('post')]
+public function test_create_resource(): void
+{
+    // test code
+}
 ```
 
 ## Base tests classes traits
@@ -125,6 +113,7 @@ Config::factory()->type('float')->forFormats([1])->create(['value' => '100.0']);
 ```
 
 This makes tests:
+
 - **More readable** - the test data tells you what's being tested
 - **More maintainable** - factory changes don't break your tests
 - **More focused** - each test cares about its specific scenario

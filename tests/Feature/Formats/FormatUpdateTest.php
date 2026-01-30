@@ -10,8 +10,6 @@ use Tests\Traits\TestsDiscordAuthMiddleware;
 
 /**
  * Test PUT /formats/{id} endpoint.
- *
- * @author rikki.sarto@gmail.com
  */
 class FormatUpdateTest extends TestCase
 {
@@ -53,8 +51,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a format successfully with valid data.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_success(): void
@@ -91,8 +87,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a format with null webhook URLs.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_with_null_webhooks(): void
@@ -125,8 +119,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a format without edit:config permission returns 403.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_without_permission_returns_403(): void
@@ -142,8 +134,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a format with invalid fields returns 422.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_validation_errors_returns_422(): void
@@ -170,8 +160,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a format with missing required fields returns 422.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_missing_required_fields_returns_422(): void
@@ -192,8 +180,6 @@ class FormatUpdateTest extends TestCase
 
     /**
      * Test updating a nonexistent format returns 404.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_format_nonexistent_returns_404(): void

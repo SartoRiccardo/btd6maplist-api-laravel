@@ -9,8 +9,6 @@ use Tests\TestCase;
 
 /**
  * Test getting all formats.
- *
- * @author rikki.sarto@gmail.com
  */
 class FormatListTest extends TestCase
 {

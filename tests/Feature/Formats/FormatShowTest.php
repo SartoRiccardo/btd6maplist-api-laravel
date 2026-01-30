@@ -10,8 +10,6 @@ use Tests\Traits\TestsDiscordAuthMiddleware;
 
 /**
  * Test GET /formats/{id} endpoint.
- *
- * @author rikki.sarto@gmail.com
  */
 class FormatShowTest extends TestCase
 {
@@ -46,8 +44,6 @@ class FormatShowTest extends TestCase
 
     /**
      * Test getting a format by ID returns full format including webhooks when user has edit:config permission.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('get')]
     public function test_get_format_by_id_returns_full_format_including_webhooks(): void
@@ -64,8 +60,6 @@ class FormatShowTest extends TestCase
 
     /**
      * Test getting a nonexistent format returns 404.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('get')]
     public function test_get_format_by_id_nonexistent_returns_404(): void
@@ -78,8 +72,6 @@ class FormatShowTest extends TestCase
 
     /**
      * Test getting a format without edit:config permission returns 403.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('get')]
     public function test_get_format_by_id_without_permission_returns_403(): void
@@ -93,8 +85,6 @@ class FormatShowTest extends TestCase
 
     /**
      * Test getting a format with edit:config permission for a different format returns 403.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('get')]
     public function test_get_format_by_id_with_wrong_format_permission_returns_403(): void

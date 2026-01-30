@@ -27,7 +27,7 @@ abstract class TestCase extends BaseTestCase
 
     protected static $migrated = false;
 
-    protected function beforeRefreshingDatabase(): void
+    protected function beforeRefreshingDatabase()
     {
         if (!self::$migrated) {
             if ($this->needsDatabaseRefresh()) {

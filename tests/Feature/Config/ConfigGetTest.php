@@ -9,15 +9,11 @@ use Tests\TestCase;
 
 /**
  * Test GET /config endpoint.
- *
- * @author rikki.sarto@gmail.com
  */
 class ConfigGetTest extends TestCase
 {
     /**
      * Test getting all config variables successfully.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('get')]
     public function test_get_config_returns_all_variables(): void

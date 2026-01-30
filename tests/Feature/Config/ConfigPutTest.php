@@ -11,8 +11,6 @@ use Tests\Traits\TestsDiscordAuthMiddleware;
 
 /**
  * Test PUT /config endpoint.
- *
- * @author rikki.sarto@gmail.com
  */
 class ConfigPutTest extends TestCase
 {
@@ -47,8 +45,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config variables with valid permissions.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_with_permissions(): void
@@ -91,8 +87,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config without edit:config permission returns 403.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_without_permission_returns_403(): void
@@ -113,8 +107,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config with invalid keys returns 422.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_with_invalid_keys_returns_422(): void
@@ -138,8 +130,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config with type mismatch returns 422.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_with_type_mismatch_returns_422(): void
@@ -179,8 +169,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config with valid int type passes.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_with_valid_int_type(): void
@@ -212,8 +200,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config with valid float type passes.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_with_valid_float_type(): void
@@ -245,8 +231,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config without permission for format skips update silently.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_without_format_permission_skips_silently(): void
@@ -291,8 +275,6 @@ class ConfigPutTest extends TestCase
 
     /**
      * Test updating config with missing config field returns 422.
-     *
-     * @author rikki.sarto@gmail.com
      */
     #[Group('put')]
     public function test_update_config_missing_config_field_returns_422(): void

@@ -8,8 +8,6 @@ use Tests\Traits\TestsDiscordAuthMiddleware;
 
 /**
  * Test reading the rules one or more times.
- *
- * @author rikki.sarto@gmail.com
  */
 class ReadRulesTest extends TestCase
 {
