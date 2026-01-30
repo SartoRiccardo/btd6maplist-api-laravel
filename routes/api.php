@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompletionController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
 use App\Http\Controllers\RoleController;
@@ -136,36 +137,18 @@ Route::get('/server-roles', fn() => response()->noContent(501));
 
 // Completions endpoints
 Route::prefix('completions')->group(function () {
-    /**
-     * 🟢 Easy: Simple recent completions query with limit
-     */
-    Route::get('/recent', fn() => response()->noContent(501));
-
-    /**
-     * 🟡 Medium: Permission-filtered query + pagination
-     */
-    Route::get('/unapproved', fn() => response()->noContent(501));
+    Route::get('/recent', [CompletionController::class, 'recent']);
+    Route::get('/unapproved', [CompletionController::class, 'unapproved'])
+        ->middleware('discord.auth');
 
     Route::prefix('{cid}')->group(function () {
-        /**
-         * 🟢 Easy: Single database query by completion ID
-         */
-        Route::get('/', fn() => response()->noContent(501));
-
-        /**
-         * 🟡 Medium: Permission validation + database update + async logging
-         */
-        Route::put('/', fn() => response()->noContent(501));
-
-        /**
-         * 🟡 Medium: Permission validation + database update + async webhook + logging
-         */
-        Route::put('/accept', fn() => response()->noContent(501));
-
-        /**
-         * 🟡 Medium: Permission checks + conditional async webhook + logging
-         */
-        Route::delete('/', fn() => response()->noContent(501));
+        Route::get('/', [CompletionController::class, 'show']);
+        Route::put('/', [CompletionController::class, 'update'])
+            ->middleware('discord.auth');
+        Route::put('/accept', [CompletionController::class, 'accept'])
+            ->middleware('discord.auth');
+        Route::delete('/', [CompletionController::class, 'destroy'])
+            ->middleware('discord.auth');
     });
 });
 
