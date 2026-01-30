@@ -190,7 +190,7 @@ Route::prefix('users')->group(function () {
 
     Route::prefix('{uid}')->group(function () {
         /**
-         * 🟢 Easy: Database query + optional Ninja Kiwi API call
+         * 🔴 Hard: Surprisingly difficult route to check due to complex queries + optional Ninja Kiwi API call
          */
         Route::get('/', fn() => response()->noContent(501));
 
