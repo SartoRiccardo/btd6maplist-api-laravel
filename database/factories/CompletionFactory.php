@@ -1,0 +1,29 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Completion;
+use App\Models\Map;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Completion>
+ */
+class CompletionFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'map' => Map::factory(),
+            'submitted_on' => now(),
+            'subm_notes' => null,
+            'subm_wh_payload' => null,
+            'copied_from_id' => null,
+        ];
+    }
+}
