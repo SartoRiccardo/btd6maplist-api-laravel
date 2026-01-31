@@ -378,7 +378,6 @@ class CompletionController extends Controller
      *     path="/completions/unapproved",
      *     summary="Get unapproved completions",
      *     tags={"Completions"},
-     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
@@ -389,53 +388,54 @@ class CompletionController extends Controller
      *         response=200,
      *         description="Successful response",
      *         @OA\JsonContent(
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Completion")),
-     *             @OA\Property(property="meta", ref="#/components/schemas/PaginatedMeta")
+     *             @OA\Property(property="completions", type="array", @OA\Items(ref="#/components/schemas/Completion")),
+     *             @OA\Property(property="total", type="integer"),
+     *             @OA\Property(property="pages", type="integer")
      *         )
      *     )
      * )
      */
     public function unapproved(Request $request): JsonResponse
     {
-        $user = auth()->guard('discord')->user();
-
         $page = $request->input('page', 1);
         $perPage = 50;
 
-        // Get formats where user has view:completion permission
-        $allowedFormats = $user->formatsWithPermission('view:completion');
+        $paginator = Completion::with([
+            'proofs',
+            'map.latestMeta',
+            'latestMeta.format',
+            'latestMeta.players',
+            'latestMeta.lcc',
+        ])
+            ->whereHas('latestMeta', function ($query) {
+                $query->whereNull('deleted_on')
+                    ->whereNull('accepted_by_id');
+            })
+            ->orderByDesc('submitted_on')
+            ->orderByDesc('id')
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        $query = CompletionMeta::with(['completion.proofs', 'completion.map.latestMeta', 'format', 'players', 'lcc', 'acceptedBy'])
-            ->whereNull('deleted_on')
-            ->whereNull('accepted_by_id')
-            ->orderBy('created_on', 'desc');
-
-        // If user has global permission (null in array), don't filter by format
-        if (!in_array(null, $allowedFormats, true)) {
-            $query->whereIn('format_id', $allowedFormats);
-        }
-
-        $total = $query->count();
-        $lastPage = (int) ceil($total / $perPage);
-
-        $completions = $query->offset(($page - 1) * $perPage)
-            ->limit($perPage)
-            ->get();
+        // Single query to get all current LCCs
+        $completions = $paginator->items();
+        $mapCodes = collect($completions)->pluck('map.code');
+        $lccIds = collect($completions)->pluck('latestMeta.lcc_id')->filter();
+        $currentLccs = DB::table('lccs_by_map')
+            ->whereIn('map', $mapCodes)
+            ->whereIn('id', $lccIds)
+            ->pluck('id', 'map');
 
         $results = [];
-        foreach ($completions as $meta) {
-            $completion = $meta->completion;
-            $currentLcc = DB::table('lccs_by_map')
-                ->where('map', $completion->map->code)
-                ->where('id', $meta->lcc)
-                ->exists();
+        foreach ($completions as $completion) {
+            $meta = $completion->latestMeta;
+            $currentLcc = isset($currentLccs[$completion->map->code]) &&
+                $currentLccs[$completion->map->code] === $meta->lcc_id;
             $results[] = $this->formatCompletionResponse($completion, $meta, $currentLcc);
         }
 
         return response()->json([
             'completions' => $results,
-            'total' => $total,
-            'pages' => $lastPage,
+            'total' => $paginator->total(),
+            'pages' => $paginator->lastPage(),
         ]);
     }
 
