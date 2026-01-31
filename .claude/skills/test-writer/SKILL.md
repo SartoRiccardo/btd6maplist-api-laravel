@@ -5,69 +5,92 @@ description: Writes tests with the appropriate coding style. Use when you need t
 
 # Testing
 
-- To create tests, create them first with `php artisan make:test`.
-    - You **do not** include `Feature/` when running this command. They are by default Feature tests and go in that directory.
-    - **IMPORTANT:** Use PHP 8+ attributes for test metadata, NOT doc-comments. Use `#[Group('get')]`, `#[Group('post')]`, etc. instead of `@test` or `@group` annotations in doc-comments.
-- When you create seeders for test purposes, located in `seeders/test`, comment in a docstring exactly which tests they are used in. You need to specify the test's path and name (if used in every test of that file) and, optionally, the exact test name (mandatory if used in only one of the tests).
-- If you only use an entity on a single test, create it in the test itself instead of using a seeder, using its model.
-- Be meticuous when checking return values. Use AssertableJSON validators, and check the exact number of keys.
-- To run tests, you can use `php artisan test --stop-on-failure`. You can also use the `--group` flag to select specific groups.
+## Creating Tests
 
-**Test Grouping (IMPORTANT):**
+- Create tests using `php artisan make:test TestName`
+    - Do NOT include `Feature/` in the command - tests are automatically created in `tests/Feature/`
+    - Tests should use descriptive names: `test_user_can_create_format()`, not `test_create()`
 
-- You **must** mark tests by which http methods they are testing using PHP 8 attributes: `#[Group('get')]`, `#[Group('post')]`, `#[Group('put')]`, `#[Group('patch')]`, `#[Group('delete')]`, etc.
-- Place the attribute directly above the test method, NOT in a doc-comment
-- **DO NOT** use `@test`, `@group`, or any other PHPUnit annotations in doc-comments - these are deprecated and will be removed in PHPUnit 12
+## Test Metadata (CRITICAL)
 
-Example:
+**Always use PHP 8+ attributes, NEVER doc-comments:**
 
 ```php
+// ✅ CORRECT - Use attributes
 #[Group('post')]
-public function test_create_resource(): void
+#[Group('formats')]
+public function test_create_format(): void
 {
     // test code
 }
+
+// ❌ WRONG - Do not use doc-comments
+/**
+ * @test
+ * @group post
+ */
+public function create_format(): void
+{
+    // This is deprecated and will break in PHPUnit 12
+}
 ```
 
-## Base tests classes traits
+**Required grouping:**
 
-- Study very well the base class @tests/TestCase.php as there are many useful helper methods you can use in all tests.
-- The traits in @tests/Traits package lots of useful pre-made tests you can inject in any route. This is useful, for example, to automatically test authentication on a route. You should get to know what's in that folder!
+- Mark tests by HTTP method: `#[Group('get')]`, `#[Group('post')]`, `#[Group('put')]`, `#[Group('patch')]`, `#[Group('delete')]`
+- Add feature groups when useful: `#[Group('formats')]`, `#[Group('auth')]`
+- Place attributes directly above the test method
 
-## Test Coding and Assertion Style
+## Running Tests
 
-### Assertion Style
+```bash
+# Run all tests, stop on first failure
+php artisan test --stop-on-failure
 
-- Avoid useless `$response` variables. For example, to get a json for a later assertion, refer to the following:
+# Run specific group
+php artisan test --group=post
+
+# Run multiple groups
+php artisan test --group=post --group=formats
+```
+
+## Base Test Classes and Traits
+
+Study these files - they contain helper methods you'll use frequently:
+
+- @tests/TestCase.php - Base class with authentication helpers, assertion utilities, and more
+- @tests/Traits - Pre-built test patterns (e.g., automatic authentication testing for routes)
+
+## Test Coding Style
+
+### Avoid Useless Variables
+
+Chain assertions instead of creating intermediate `$response` variables:
 
 ```php
-// BAD! Do not do this.
-$response = $this->getJson("/some/route");
+// ❌ BAD - Unnecessary variable
+$response = $this->getJson("/api/formats");
 $response->assertStatus(200);
 $actual = $response->json();
 
-// GOOD! Less clutter.
-$actual = $this->getJson("/some/route")
-  ->assertStatus(200)
-  ->json();
+// ✅ GOOD - Clean chaining
+$actual = $this->getJson("/api/formats")
+    ->assertStatus(200)
+    ->json();
 ```
 
-### Integration Test Pattern
+### Integration Test Pattern (CRITICAL)
 
-Always verify with GET requests, never query database directly:
+**Always verify with GET requests, never query the database directly:**
 
 ```php
-// Create/update something
+// 1. Create/update something
 $format = Format::factory()->create();
 $user = $this->createUserWithPermissions([$format->id => ['edit:config']]);
 
 $payload = [
-    ...$this->requestData(),
     'hidden' => true,
     'run_submission_status' => 'lcc_only',
-    'map_submission_status' => 'open_chimps',
-    'map_submission_wh' => fake()->url(),
-    'run_submission_wh' => fake()->url(),
     'emoji' => fake()->emoji(),
 ];
 
@@ -75,12 +98,13 @@ $this->actingAs($user, 'discord')
     ->putJson('/api/formats/' . $format->id, $payload)
     ->assertStatus(204);
 
-// Verify with GET
+// 2. Verify with GET (not database query!)
 $actual = $this->actingAs($user, 'discord')
     ->getJson('/api/formats/' . $format->id)
     ->assertStatus(200)
     ->json();
 
+// 3. Single assertion using jsonStructure()
 $expected = Format::jsonStructure([
     ...$format->toArray(),
     ...$payload,
@@ -89,34 +113,47 @@ $expected = Format::jsonStructure([
 $this->assertEquals($expected, $actual);
 ```
 
-### Final Assertion
+**Why GET requests?** These are integration tests. We test the actual API behavior, not database state.
 
-Always use `->assertEquals($expected, $actual)` for final assertion. Use the model's `jsonStructure()` method from the TestableStructure trait to craft response schemas. Combine model data and payload using spread operator: `[...$model->toArray(), ...$payload]`. Use `strict: false` to ignore extra keys from defaults().
+### Final Assertion Pattern
 
-### Factory Usage
+Always use `$this->assertEquals($expected, $actual)` for the final assertion:
 
-**Only set values you actually assert against.** Let the factory handle all defaults.
+1. Use the model's `jsonStructure()` method (from `TestableStructure` trait)
+2. Combine model data with payload: `[...$model->toArray(), ...$payload]`
+3. Use `strict: false` parameter (details to be added)
 
 ```php
-// BAD - Setting too many values that aren't tested
+$expected = Model::jsonStructure([
+    ...$model->toArray(),
+    ...$payload,
+], strict: false);
+
+$this->assertEquals($expected, $actual);
+```
+
+## Factory Usage
+
+**Golden Rule: Only set values you actually assert against.**
+
+Let the factory handle all defaults. Setting unnecessary values makes tests brittle and unclear.
+
+```php
+// ❌ BAD - Setting values that aren't tested
 Config::factory()->create([
     'name' => 'points_top_map',
     'value' => '100.0',
     'type' => 'float',
-    'description' => 'Points for the #1 map',  // Not asserted against!
-    'difficulty' => null,                       // Not asserted against!
+    'description' => 'Points for the #1 map',  // Not asserted!
+    'difficulty' => null,                       // Not asserted!
 ]);
 
-// GOOD - Only what matters for the test
+// ✅ GOOD - Only what matters
 Config::factory()->type('float')->forFormats([1])->create(['value' => '100.0']);
 // Then assert: assertEquals(100.0, $actual['points_top_map']['value']);
 ```
 
-This makes tests:
-
-- **More readable** - the test data tells you what's being tested
-- **More maintainable** - factory changes don't break your tests
-- **More focused** - each test cares about its specific scenario
+### Factory Patterns
 
 ```php
 // Single model
@@ -133,15 +170,62 @@ $apps = OAuth2App::factory()
     ])
     ->create();
 
-// With specific attributes (use when you REALLY NEED a specific value for some reason)
-$specificName = 'Specific Name'
+// With specific attributes (only when you NEED them for assertions)
+$specificName = 'Specific Name';
 $app = OAuth2App::factory()->create(['name' => $specificName]);
-// ... reuse $specificName in assertions if needed ...
+// ... later assert against $specificName ...
 ```
 
-- As most of the tests we write are Integration Tests, assertions must happen with calls to GET requests and checking the response, **never** by fetching directly in the database.
-- Assertions must, most of the time, happen with a single `->assertEquals` call. Use the model's `jsonStructure()` method (from TestableStructure trait) to craft correct response schemas. Combine the model's array representation with your payload using spread operator: `[...$model->toArray(), ...$payload]`.
+### Factory Relationships (IMPORTANT)
 
-## Existing Tests
+**Always prefer built-in `->for()` methods for relationships:**
 
-You may look at existing tests to know the code style and patterns we currently use. Some good example tests can be found in @tests/Feature/Formats
+```php
+// ✅ BEST - Use ->for() when available
+$run = Run::factory()
+    ->for($user)
+    ->for($format)
+    ->create();
+
+// ⚠️ ACCEPTABLE - Only if ->for() isn't available
+$run = Run::factory()->create([
+    'user_id' => $user->id,
+    'format_id' => $format->id,
+]);
+```
+
+The `->for()` method is cleaner and uses the relationship definitions from the model.
+
+### Custom Factory Methods
+
+Factories may have custom methods like `->type('float')`, `->forFormats([1])`, etc. Check the factory class definition to see what's available - these methods make tests more readable than setting raw attributes.
+
+## Entity Creation Strategy
+
+If an entity is only used in a single test, create it inline using the factory. Don't create shared test data unless multiple tests need it.
+
+```php
+// ✅ Single-test entity - create inline
+public function test_user_can_delete_own_format(): void
+{
+    $format = Format::factory()->create(['user_id' => $this->user->id]);
+    // ... test logic ...
+}
+```
+
+## Example Tests
+
+See @tests/Feature/Formats for well-written examples following these patterns.
+
+## Quick Reference
+
+**Before writing tests, always:**
+
+1. ✅ Check @tests/TestCase.php for helper methods
+2. ✅ Check @tests/Traits for pre-built test patterns
+3. ✅ Use PHP 8 attributes, not doc-comments
+4. ✅ Verify with GET requests, not database queries
+5. ✅ Use factories with minimal attributes
+6. ✅ Prefer `->for()` for relationships
+7. ✅ Chain assertions, avoid intermediate variables
+8. ✅ Use single `assertEquals()` with `jsonStructure()` for final assertion
