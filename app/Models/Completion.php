@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\ProofType;
+use App\Constants\ProofConstants;
 use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -103,7 +103,7 @@ class Completion extends Model
         if (!$this->relationLoaded('proofs')) {
             $this->load('proofs');
         }
-        return $this->proofs->where('proof_type', ProofType::Image->value)->pluck('proof_url')->values()->toArray();
+        return $this->proofs->where('proof_type', ProofConstants::IMAGE)->pluck('proof_url')->values()->toArray();
     }
 
     /**
@@ -114,7 +114,7 @@ class Completion extends Model
         if (!$this->relationLoaded('proofs')) {
             $this->load('proofs');
         }
-        return $this->proofs->where('proof_type', ProofType::Video->value)->pluck('proof_url')->values()->toArray();
+        return $this->proofs->where('proof_type', ProofConstants::VIDEO)->pluck('proof_url')->values()->toArray();
     }
 
     // -- TestableStructure -- //
