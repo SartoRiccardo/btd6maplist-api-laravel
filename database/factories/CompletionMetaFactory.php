@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Constants\FormatConstants;
 use App\Models\CompPlayer;
 use App\Models\CompletionMeta;
 use App\Models\Completion;
@@ -28,7 +29,13 @@ class CompletionMetaFactory extends Factory
             'created_on' => now(),
             'deleted_on' => null,
             'accepted_by_id' => null,
-            'format_id' => 1,
+            'format_id' => fake()->randomElement([
+                FormatConstants::MAPLIST,
+                FormatConstants::MAPLIST_ALL_VERSIONS,
+                FormatConstants::NOSTALGIA_PACK,
+                FormatConstants::EXPERT_LIST,
+                FormatConstants::BEST_OF_THE_BEST,
+            ]),
             'copied_from_id' => null,
         ];
     }
