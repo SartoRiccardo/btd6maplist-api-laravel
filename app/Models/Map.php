@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Map extends Model
 {
@@ -14,7 +15,13 @@ class Map extends Model
 
     protected $primaryKey = 'code';
 
+    protected $keyType = 'string';
+
     public $incrementing = false;
+
+    protected $hidden = [
+        'latestMeta',
+    ];
 
     protected $fillable = [
         'code',
@@ -34,6 +41,17 @@ class Map extends Model
      */
     public function completions(): HasMany
     {
-        return $this->hasMany(Completion::class, 'map');
+        return $this->hasMany(Completion::class, 'map_code');
+    }
+
+    /**
+     * Get the latest (current) metadata for this map.
+     */
+    public function latestMeta(): HasOne
+    {
+        return $this->hasOne(MapListMeta::class, 'code', 'code')
+            ->whereNull('deleted_on')
+            ->orderBy('created_on', 'desc')
+            ->orderBy('id', 'desc');
     }
 }

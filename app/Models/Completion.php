@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\ProofType;
 use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -50,12 +51,12 @@ class Completion extends Model
         'completionMetas',
         'meta',
         'latestMeta',
-        'latestMetaIncludingDeleted',
+        'map_code',
     ];
 
     protected $fillable = [
         'id',
-        'map',
+        'map_code',
         'submitted_on',
         'subm_notes',
         'subm_wh_payload',
@@ -63,42 +64,15 @@ class Completion extends Model
     ];
 
     protected $casts = [
-        'submitted_on' => 'datetime',
+        'submitted_on' => 'timestamp',
         'subm_wh_payload' => 'array', // JSON decode webhook payload
     ];
-
-    /**
-     * Get all metadata versions for this completion.
-     */
-    public function completionMetas(): HasMany
-    {
-        return $this->hasMany(CompletionMeta::class);
-    }
-
-    /**
-     * Alias for completionMetas().
-     */
-    public function meta(): HasMany
-    {
-        return $this->completionMetas();
-    }
 
     /**
      * Get the latest (current) metadata for this completion.
      * This uses the latest_completions view logic.
      */
     public function latestMeta(): HasOne
-    {
-        return $this->hasOne(CompletionMeta::class, 'completion_id')
-            ->whereNull('deleted_on')
-            ->orderBy('created_on', 'desc')
-            ->orderBy('id', 'desc');
-    }
-
-    /**
-     * Get the latest metadata for this completion, including deleted records.
-     */
-    public function latestMetaIncludingDeleted(): HasOne
     {
         return $this->hasOne(CompletionMeta::class, 'completion_id')
             ->orderBy('created_on', 'desc')
@@ -110,7 +84,7 @@ class Completion extends Model
      */
     public function map(): BelongsTo
     {
-        return $this->belongsTo(Map::class, 'map', 'code');
+        return $this->belongsTo(Map::class, 'map_code', 'code');
     }
 
     /**
@@ -129,7 +103,7 @@ class Completion extends Model
         if (!$this->relationLoaded('proofs')) {
             $this->load('proofs');
         }
-        return $this->proofs->where('proof_type', 0)->pluck('proof_url')->values()->toArray();
+        return $this->proofs->where('proof_type', ProofType::Image->value)->pluck('proof_url')->values()->toArray();
     }
 
     /**
@@ -140,7 +114,7 @@ class Completion extends Model
         if (!$this->relationLoaded('proofs')) {
             $this->load('proofs');
         }
-        return $this->proofs->where('proof_type', 1)->pluck('proof_url')->values()->toArray();
+        return $this->proofs->where('proof_type', ProofType::Video->value)->pluck('proof_url')->values()->toArray();
     }
 
     // -- TestableStructure -- //
@@ -149,7 +123,6 @@ class Completion extends Model
     {
         return array_merge([
             'id' => 0,
-            'map' => 'MLTEST',
             'users' => [],
             'black_border' => false,
             'no_geraldo' => false,

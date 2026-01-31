@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Completion;
 use App\Models\Map;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,7 +18,7 @@ class CompletionFactory extends Factory
     public function definition(): array
     {
         return [
-            'map' => Map::factory(),
+            'map_code' => fn() => Map::factory()->withMeta()->create()->code,
             'submitted_on' => now(),
             'subm_notes' => null,
             'subm_wh_payload' => null,

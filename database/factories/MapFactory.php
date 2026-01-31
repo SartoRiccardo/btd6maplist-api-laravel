@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Map;
+use App\Models\MapListMeta;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Map>
+ * @extends \Illuminate\Database\Eloquent\Factory<\App\Models\Map>
  */
 class MapFactory extends Factory
 {
@@ -24,5 +26,17 @@ class MapFactory extends Factory
             'map_preview_url' => null,
             'map_notes' => null,
         ];
+    }
+
+    /**
+     * Indicate the map has metadata.
+     */
+    public function withMeta(): static
+    {
+        return $this->afterCreating(function (Map $map) {
+            MapListMeta::factory()->create([
+                'code' => $map->code,
+            ]);
+        });
     }
 }
