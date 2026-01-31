@@ -26,6 +26,11 @@ class MapListMeta extends Model
         'deleted_on',
     ];
 
+    protected $hidden = [
+        'created_on',
+        'id',
+    ];
+
     protected $casts = [
         'optimal_heros' => 'array', // PostgreSQL text[] array
     ];

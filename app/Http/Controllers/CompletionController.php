@@ -47,7 +47,7 @@ class CompletionController extends Controller
     {
         $completion = Completion::with([
             'proofs',
-            'map',
+            'map.latestMeta',
             'latestMeta.format',
             'latestMeta.players',
             'latestMeta.lcc',
@@ -66,7 +66,7 @@ class CompletionController extends Controller
 
         // Check if this is the current LCC using the lccs_by_map view
         $currentLcc = DB::table('lccs_by_map')
-            ->where('map', $completion->map_code)
+            ->where('map', $completion->map->code)
             ->where('id', $meta->lcc_id)
             ->exists();
 
@@ -101,7 +101,6 @@ class CompletionController extends Controller
 
         // Get the current completion metadata
         $currentMeta = CompletionMeta::where('completion_id', $cid)
-            ->whereNull('deleted_on')
             ->orderBy('created_on', 'desc')
             ->orderBy('id', 'desc')
             ->first();
@@ -113,14 +112,13 @@ class CompletionController extends Controller
         $newFormat = $request->input('format');
         $oldFormat = $currentMeta->format_id;
 
-        // Check permissions for the format being edited
-        if (!$user->hasPermission('edit:completion', $oldFormat)) {
-            return response()->json(['error' => "Missing edit:completion permission for format {$oldFormat}"], 403);
-        }
+        // Check permissions for both formats in a single query
+        $formats = array_unique([$oldFormat, $newFormat]);
+        $allowedFormats = $user->formatsWithPermission('edit:completion');
 
-        // If changing formats, check permission for new format too
-        if ($oldFormat !== $newFormat && !$user->hasPermission('edit:completion', $newFormat)) {
-            return response()->json(['error' => "Missing edit:completion permission for format {$newFormat}"], 403);
+        if (!in_array(null, $allowedFormats, true) && array_diff($formats, $allowedFormats)) {
+            $missing = array_diff($formats, $allowedFormats);
+            return response()->json(['error' => "Missing edit:completion permission for format(s): " . implode(', ', $missing)], 403);
         }
 
         // Check if user is trying to edit their own completion
@@ -187,34 +185,29 @@ class CompletionController extends Controller
      */
     public function destroy(int $cid): JsonResponse
     {
-        $user = auth()->guard('discord')->user();
-
         // Check for latest meta (including deleted)
         $anyMeta = CompletionMeta::where('completion_id', $cid)
             ->latest('created_on')
             ->first();
-
         if (!$anyMeta) {
             return response()->json(['error' => 'Completion not found'], 404);
         }
 
         // Check permission
+        $user = auth()->guard('discord')->user();
         if (!$user->hasPermission('delete:completion', $anyMeta->format_id)) {
             return response()->json(['error' => "Missing delete:completion permission for format {$anyMeta->format_id}"], 403);
         }
 
         // If already deleted, return 204 (idempotent)
-        if ($anyMeta->deleted_on !== null) {
-            return response()->json([], 204);
+        if ($anyMeta->deleted_on === null) {
+            $anyMeta->update(['deleted_on' => now()]);
+
+            Log::info('Completion deleted', [
+                'completion_id' => $cid,
+                'deleted_by' => $user->discord_id,
+            ]);
         }
-
-        // Soft delete
-        $anyMeta->update(['deleted_on' => now()]);
-
-        Log::info('Completion deleted', [
-            'completion_id' => $cid,
-            'deleted_by' => $user->discord_id,
-        ]);
 
         return response()->json([], 204);
     }
@@ -335,19 +328,19 @@ class CompletionController extends Controller
             return;
         }
 
-        $mapCode = $completion->map;
+        $mapCode = $completion->map->code;
         $currentBtd6Ver = (int) Config::where('name', 'current_btd6_ver')->first()->value;
 
         DB::transaction(function () use ($completionMeta, $mapCode, $currentBtd6Ver) {
             // Current version verifier
-            $exists = Verification::where('map', $mapCode)
+            $exists = Verification::where('map_code', $mapCode)
                 ->where('version', $currentBtd6Ver)
                 ->exists();
 
             if (!$exists) {
                 foreach ($completionMeta->players as $player) {
                     Verification::firstOrCreate([
-                        'map' => $mapCode,
+                        'map_code' => $mapCode,
                         'user_id' => $player->discord_id,
                         'version' => $currentBtd6Ver,
                     ]);
@@ -359,14 +352,14 @@ class CompletionController extends Controller
             }
 
             // First time verifier
-            $exists = Verification::where('map', $mapCode)
+            $exists = Verification::where('map_code', $mapCode)
                 ->whereNull('version')
                 ->exists();
 
             if (!$exists) {
                 foreach ($completionMeta->players as $player) {
                     Verification::firstOrCreate([
-                        'map' => $mapCode,
+                        'map_code' => $mapCode,
                         'user_id' => $player->discord_id,
                         'version' => null,
                     ]);
@@ -412,7 +405,7 @@ class CompletionController extends Controller
         // Get formats where user has view:completion permission
         $allowedFormats = $user->formatsWithPermission('view:completion');
 
-        $query = CompletionMeta::with(['completion.proofs', 'format', 'players', 'lcc', 'acceptedBy'])
+        $query = CompletionMeta::with(['completion.proofs', 'completion.map.latestMeta', 'format', 'players', 'lcc', 'acceptedBy'])
             ->whereNull('deleted_on')
             ->whereNull('accepted_by_id')
             ->orderBy('created_on', 'desc');
@@ -433,7 +426,7 @@ class CompletionController extends Controller
         foreach ($completions as $meta) {
             $completion = $meta->completion;
             $currentLcc = DB::table('lccs_by_map')
-                ->where('map', $completion->map)
+                ->where('map', $completion->map->code)
                 ->where('id', $meta->lcc)
                 ->exists();
             $results[] = $this->formatCompletionResponse($completion, $meta, $currentLcc);
@@ -474,7 +467,8 @@ class CompletionController extends Controller
         $formats = $request->input('formats');
         $formatIds = $formats ? explode(',', $formats) : [1, 51];
 
-        $completions = CompletionMeta::with(['completion.proofs', 'format', 'players', 'lcc'])
+        /* WRONG! the original code fetches from latest_completions, which auto-filters the latest completion meta PER run */
+        $completions = CompletionMeta::with(['completion.proofs', 'completion.map.latestMeta', 'format', 'players', 'lcc'])
             ->whereNull('deleted_on')
             ->whereNotNull('accepted_by_id')
             ->whereIn('format_id', $formatIds)
@@ -486,7 +480,7 @@ class CompletionController extends Controller
         foreach ($completions as $meta) {
             $completion = $meta->completion;
             $currentLcc = DB::table('lccs_by_map')
-                ->where('map', $completion->map)
+                ->where('map', $completion->map->code)
                 ->where('id', $meta->lcc)
                 ->exists();
             $results[] = $this->formatCompletionResponse($completion, $meta, $currentLcc);
@@ -500,10 +494,13 @@ class CompletionController extends Controller
      */
     protected function formatCompletionResponse(Completion $completion, CompletionMeta $meta, bool $currentLcc): array
     {
-        dump($completion->map->toArray());
         return [
             ...$meta->toArray(),
             ...$completion->toArray(),
+            'map' => [
+                ...$completion->map->latestMeta->toArray(),
+                ...$completion->map->toArray(),
+            ],
             'users' => $meta->players
                 ->map(fn($user) => [
                     'id' => (string) $user->discord_id,

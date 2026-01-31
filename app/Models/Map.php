@@ -32,10 +32,6 @@ class Map extends Model
         'map_notes',
     ];
 
-    protected $casts = [
-        'r6_start' => 'datetime',
-    ];
-
     /**
      * Get all completions for this map.
      */

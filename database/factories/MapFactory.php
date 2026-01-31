@@ -21,7 +21,7 @@ class MapFactory extends Factory
         return [
             'code' => 'ML' . fake()->unique()->bothify('??????'),
             'name' => fake()->sentence(),
-            'r6_start' => fake()->dateTime(),
+            'r6_start' => fake()->url(),
             'map_data' => null,
             'map_preview_url' => null,
             'map_notes' => null,
