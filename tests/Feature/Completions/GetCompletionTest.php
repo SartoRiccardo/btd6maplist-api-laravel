@@ -5,7 +5,8 @@ namespace Tests\Feature\Completions;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\CompletionProof;
-use App\Models\Leastcostchimps;
+use App\Models\LeastCostChimps;
+use App\Models\Map;
 use App\Models\User;
 use PHPUnit\Attributes\Group;
 use Tests\TestCase;
@@ -29,6 +30,10 @@ class GetCompletionTest extends TestCase
         $expected = Completion::jsonStructure([
             ...$meta->toArray(),
             ...$completion->toArray(),
+            'map' => Map::jsonStructure([
+                ...$completion->map->latestMeta->toArray(),
+                ...$completion->map->toArray(),
+            ]),
             'users' => [
                 ['id' => (string) $user->discord_id, 'name' => $user->name],
             ],
@@ -42,7 +47,7 @@ class GetCompletionTest extends TestCase
     public function test_get_completion_includes_lcc_data(): void
     {
         $user = User::factory()->create();
-        $lcc = Leastcostchimps::factory()->create();
+        $lcc = LeastCostChimps::factory()->create();
 
         $completion = Completion::factory()->create();
         $meta = CompletionMeta::factory()
