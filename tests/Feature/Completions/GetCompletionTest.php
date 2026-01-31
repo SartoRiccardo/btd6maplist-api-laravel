@@ -2,14 +2,13 @@
 
 namespace Tests\Feature\Completions;
 
-use App\Models\CompPlayer;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\CompletionProof;
 use App\Models\LeastCostChimps;
-use App\Models\Map;
 use App\Models\User;
 use PHPUnit\Attributes\Group;
+use Tests\Helpers\CompletionTestHelper;
 use Tests\TestCase;
 
 class GetCompletionTest extends TestCase
@@ -28,7 +27,7 @@ class GetCompletionTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = $this->expectedCompletionResponse($meta, $completion, $user, false);
+        $expected = CompletionTestHelper::expectedCompletionResponse($meta, $completion, $user, false);
         $this->assertEquals($expected, $actual);
     }
 
@@ -49,7 +48,7 @@ class GetCompletionTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = $this->expectedCompletionResponse($meta, $completion, $user, true);
+        $expected = CompletionTestHelper::expectedCompletionResponse($meta, $completion, $user, true);
         $this->assertEquals($expected, $actual);
     }
 
@@ -104,7 +103,7 @@ class GetCompletionTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = $this->expectedCompletionResponse($metas[$metaCount - 1], $completion, $user, false);
+        $expected = CompletionTestHelper::expectedCompletionResponse($metas[$metaCount - 1], $completion, $user, false);
         $this->assertEquals($expected, $actual);
     }
 
@@ -132,30 +131,7 @@ class GetCompletionTest extends TestCase
             ->json();
 
         // Should return the latest (deleted) meta
-        $expected = $this->expectedCompletionResponse($metas[$metaCount - 1], $completion, $user, false);
+        $expected = CompletionTestHelper::expectedCompletionResponse($metas[$metaCount - 1], $completion, $user, false);
         $this->assertEquals($expected, $actual);
-    }
-
-    /**
-     * Build expected completion response structure.
-     */
-    protected function expectedCompletionResponse(
-        CompletionMeta $meta,
-        Completion $completion,
-        User $user,
-        bool $currentLcc
-    ): array {
-        return Completion::jsonStructure([
-            ...$meta->toArray(),
-            ...$completion->toArray(),
-            'map' => Map::jsonStructure([
-                ...$completion->map->latestMeta->toArray(),
-                ...$completion->map->toArray(),
-            ]),
-            'users' => [
-                ['id' => (string) $user->discord_id, 'name' => $user->name],
-            ],
-            'current_lcc' => $currentLcc,
-        ]);
     }
 }

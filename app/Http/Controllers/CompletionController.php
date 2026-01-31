@@ -467,22 +467,36 @@ class CompletionController extends Controller
         $formats = $request->input('formats');
         $formatIds = $formats ? explode(',', $formats) : [1, 51];
 
-        /* WRONG! the original code fetches from latest_completions, which auto-filters the latest completion meta PER run */
-        $completions = CompletionMeta::with(['completion.proofs', 'completion.map.latestMeta', 'format', 'players', 'lcc'])
-            ->whereNull('deleted_on')
-            ->whereNotNull('accepted_by_id')
-            ->whereIn('format_id', $formatIds)
-            ->orderBy('created_on', 'desc')
+        $completions = Completion::with([
+            'proofs',
+            'map.latestMeta',
+            'latestMeta.format',
+            'latestMeta.players',
+            'latestMeta.lcc',
+        ])
+            ->whereHas('latestMeta', function ($query) use ($formatIds) {
+                $query->whereNull('deleted_on')
+                    ->whereNotNull('accepted_by_id')
+                    ->whereIn('format_id', $formatIds);
+            })
+            ->orderByDesc('submitted_on')
+            ->orderByDesc('id')
             ->limit(5)
             ->get();
 
+        // Single query to get all current LCCs
+        $mapCodes = $completions->pluck('map.code');
+        $lccIds = $completions->pluck('latestMeta.lcc_id')->filter();
+        $currentLccs = DB::table('lccs_by_map')
+            ->whereIn('map', $mapCodes)
+            ->whereIn('id', $lccIds)
+            ->pluck('id', 'map');
+
         $results = [];
-        foreach ($completions as $meta) {
-            $completion = $meta->completion;
-            $currentLcc = DB::table('lccs_by_map')
-                ->where('map', $completion->map->code)
-                ->where('id', $meta->lcc)
-                ->exists();
+        foreach ($completions as $completion) {
+            $meta = $completion->latestMeta;
+            $currentLcc = isset($currentLccs[$completion->map->code]) &&
+                $currentLccs[$completion->map->code] === $meta->lcc_id;
             $results[] = $this->formatCompletionResponse($completion, $meta, $currentLcc);
         }
 
