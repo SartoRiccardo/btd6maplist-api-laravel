@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -39,6 +40,17 @@ class Completion extends Model
     protected $appends = [
         'subm_proof_img',
         'subm_proof_vid',
+    ];
+
+    protected $hidden = [
+        'submitted_on',
+        'subm_wh_payload',
+        'copied_from_id',
+        'proofs',
+        'completionMetas',
+        'meta',
+        'latestMeta',
+        'latestMetaIncludingDeleted',
     ];
 
     protected $fillable = [
@@ -91,6 +103,14 @@ class Completion extends Model
         return $this->hasOne(CompletionMeta::class, 'completion_id')
             ->orderBy('created_on', 'desc')
             ->orderBy('id', 'desc');
+    }
+
+    /**
+     * Get the map for this completion.
+     */
+    public function map(): BelongsTo
+    {
+        return $this->belongsTo(Map::class, 'map', 'code');
     }
 
     /**
