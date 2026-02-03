@@ -109,34 +109,30 @@ class CompletionController extends Controller
             return response()->json(['error' => 'Completion not found'], 404);
         }
 
-        $newFormat = $request->input('format');
-        $oldFormat = $currentMeta->format_id;
-
-        // Check permissions for both formats in a single query
-        $formats = array_unique([$oldFormat, $newFormat]);
-        $allowedFormats = $user->formatsWithPermission('edit:completion');
-
-        if (!in_array(null, $allowedFormats, true) && array_diff($formats, $allowedFormats)) {
-            $missing = array_diff($formats, $allowedFormats);
-            return response()->json(['error' => "Missing edit:completion permission for format(s): " . implode(', ', $missing)], 403);
-        }
-
         // Check if user is trying to edit their own completion
         $userIds = $request->input('user_ids');
         if (in_array((string) $user->discord_id, $userIds)) {
             return response()->json(['error' => 'Cannot edit your own completion'], 403);
         }
 
+        $newFormat = $request->input('format');
+        $oldFormat = $currentMeta->format_id;
+
+        // Check permissions for both formats in a single query
+        $allowedFormats = $user->formatsWithPermission('edit:completion');
+        if (!in_array(null, $allowedFormats, true) && in_array($newFormat, $allowedFormats) && in_array($oldFormat, $allowedFormats)) {
+            $missing = array_diff([$oldFormat, $newFormat], $allowedFormats);
+            return response()->json(['error' => "Missing edit:completion permission for format(s): " . implode(', ', $missing)], 403);
+        }
+
         DB::transaction(function () use ($request, $cid, $userIds, $currentMeta, $user) {
             // Handle LCC
-            $lccId = $currentMeta->lcc_id;
+            $lccId = null;
             if ($request->has('lcc') && $request->input('lcc') !== null) {
                 $lcc = LeastCostChimps::create([
                     'leftover' => $request->input('lcc.leftover'),
                 ]);
                 $lccId = $lcc->id;
-            } elseif ($request->input('lcc') === null) {
-                $lccId = null;
             }
 
             // Create new metadata version
@@ -148,7 +144,6 @@ class CompletionController extends Controller
                 'created_on' => now(),
                 'accepted_by_id' => $currentMeta->accepted_by_id,
                 'format_id' => $request->input('format'),
-                'copied_from_id' => null,
             ]);
 
             // Sync players

@@ -26,6 +26,10 @@ class LeastCostChimps extends Model
         'leftover',
     ];
 
+    protected $hidden = [
+        'id',
+    ];
+
     /**
      * Get all completion metadata that use this LCC.
      */

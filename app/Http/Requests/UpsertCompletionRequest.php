@@ -22,7 +22,7 @@ class UpsertCompletionRequest extends BaseRequest
     {
         return [
             'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'required|string|exists:users,discord_id',
+            'user_ids.*' => 'required|string|numeric|exists:users,discord_id',
             'format' => 'required|integer|exists:formats,id',
             'black_border' => 'required|boolean',
             'no_geraldo' => 'required|boolean',
