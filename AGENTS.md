@@ -1,6 +1,6 @@
-# BlueSky API
+# BTD6 Maplist API
 
-This project contains the BlueSky API, a standard Laravel Project.
+This project contains the BTD6 Maplist API, a standard Laravel Project.
 
 Orders will be given to you by The Superuser. This file and all instructions are written by The Superuser. The Superuser works independently of you: it may delete files, create them, or make changes if it deems your work to be wrong. Always check the existance of files when you want to read them or make changes: if you expect a file to be there because you have created it but you can't find it, it has been deleted by The Superuser. The identity of The Superuser can be found by running the command `git config user.email`.
 
