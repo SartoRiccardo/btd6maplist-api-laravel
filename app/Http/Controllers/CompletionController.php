@@ -379,10 +379,22 @@ class CompletionController extends Controller
      *     summary="Get unapproved completions",
      *     tags={"Completions"},
      *     @OA\Parameter(
+     *         name="formats",
+     *         in="query",
+     *         description="Comma-separated format IDs",
+     *         @OA\Schema(type="string", example="1,51")
+     *     ),
+     *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
      *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Items per page",
+     *         @OA\Schema(type="integer", default=50)
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -397,8 +409,11 @@ class CompletionController extends Controller
      */
     public function unapproved(Request $request): JsonResponse
     {
+        $formats = $request->input('formats');
+        $formatIds = $formats ? explode(',', $formats) : null;
+
         $page = $request->input('page', 1);
-        $perPage = 50;
+        $perPage = $request->input('per_page', 50);
 
         $paginator = Completion::with([
             'proofs',
@@ -407,9 +422,13 @@ class CompletionController extends Controller
             'latestMeta.players',
             'latestMeta.lcc',
         ])
-            ->whereHas('latestMeta', function ($query) {
+            ->whereHas('latestMeta', function ($query) use ($formatIds) {
                 $query->whereNull('deleted_on')
                     ->whereNull('accepted_by_id');
+
+                if ($formatIds) {
+                    $query->whereIn('format_id', $formatIds);
+                }
             })
             ->orderByDesc('submitted_on')
             ->orderByDesc('id')
