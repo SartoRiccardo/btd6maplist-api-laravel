@@ -52,6 +52,7 @@ class CompletionMeta extends Model
         'copied_from',
         'format_id',
         'copied_to',
+        'created_on',
     ];
 
     protected $fillable = [

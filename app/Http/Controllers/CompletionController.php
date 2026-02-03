@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpsertCompletionRequest;
+use App\Jobs\UpdateDiscordWebhookJob;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\LeastCostChimps;
@@ -124,7 +125,7 @@ class CompletionController extends Controller
 
         // Check permissions for both formats in a single query
         $allowedFormats = $user->formatsWithPermission('edit:completion');
-        if (!in_array(null, $allowedFormats, true) && in_array($newFormat, $allowedFormats) && in_array($oldFormat, $allowedFormats)) {
+        if (!in_array(null, $allowedFormats, true) && (!in_array($newFormat, $allowedFormats) || !in_array($oldFormat, $allowedFormats))) {
             $missing = array_diff([$oldFormat, $newFormat], $allowedFormats);
             return response()->json(['error' => "Missing edit:completion permission for format(s): " . implode(', ', $missing)], 403);
         }
@@ -302,6 +303,12 @@ class CompletionController extends Controller
 
             $this->verificationService->createVerificationsForCompletion($newMeta);
         });
+
+        // Dispatch webhook update job (after transaction succeeds)
+        $completion = Completion::find($cid);
+        if ($completion && $completion->subm_wh_payload !== null) {
+            UpdateDiscordWebhookJob::dispatch($cid);
+        }
 
         return response()->json([], 204);
     }

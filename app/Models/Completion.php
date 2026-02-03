@@ -41,6 +41,7 @@ class Completion extends Model
     protected $appends = [
         'subm_proof_img',
         'subm_proof_vid',
+        'created_on',
     ];
 
     protected $hidden = [
@@ -65,7 +66,6 @@ class Completion extends Model
 
     protected $casts = [
         'submitted_on' => 'timestamp',
-        'subm_wh_payload' => 'array', // JSON decode webhook payload
     ];
 
     /**
@@ -115,6 +115,14 @@ class Completion extends Model
             $this->load('proofs');
         }
         return $this->proofs->where('proof_type', ProofType::VIDEO)->pluck('proof_url')->values()->toArray();
+    }
+
+    /**
+     * Get created_on timestamp (submitted_on) for API responses.
+     */
+    public function getCreatedOnAttribute(): ?int
+    {
+        return $this->submitted_on;
     }
 
     // -- TestableStructure -- //

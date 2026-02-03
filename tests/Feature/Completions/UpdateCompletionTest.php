@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Completions;
 
+use App\Models\Config;
 use App\Models\CompPlayer;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
+use App\Models\Format;
 use App\Models\LeastCostChimps;
 use App\Models\User;
 use PHPUnit\Attributes\Group;
@@ -18,12 +20,26 @@ class UpdateCompletionTest extends TestCase
 
     protected Completion $completion;
     protected User $player;
+    protected Format $format;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Create config needed by VerificationService
+        Config::firstOrCreate(['name' => 'current_btd6_ver'], [
+            'value' => '45',
+            'type' => 'int',
+        ]);
+
+        $this->format = Format::factory()->create();
         $this->player = User::factory()->create();
-        $completions = CompletionTestHelper::createCompletionsWithMeta(1, $this->player, accepted: true);
+        $completions = CompletionTestHelper::createCompletionsWithMeta(
+            1,
+            $this->player,
+            accepted: true,
+            formatId: $this->format->id
+        );
         $this->completion = $completions->first();
     }
 
@@ -43,7 +59,7 @@ class UpdateCompletionTest extends TestCase
     {
         return [
             'user_ids' => [(string) $this->player->discord_id],
-            'format' => 1,
+            'format' => $this->format->id,
             'black_border' => false,
             'no_geraldo' => false,
         ];
@@ -59,7 +75,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_success(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         // Load current state before update
         $this->completion->load(['map.latestMeta', 'latestMeta', 'proofs']);
@@ -84,7 +100,7 @@ class UpdateCompletionTest extends TestCase
             $currentMeta,
             $this->completion,
             $this->player,
-            false
+            true  // LCC with leftover 5000 becomes the current LCC
         );
         $expected = Completion::jsonStructure([...$expected, ...$payload]);
 
@@ -94,7 +110,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_removing_lcc(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
         $player = User::factory()->create();
 
         // Create completion with LCC
@@ -105,7 +121,7 @@ class UpdateCompletionTest extends TestCase
             ->accepted()
             ->create([
                 'completion_id' => $completion->id,
-                'format_id' => 1,
+                'format_id' => $this->format->id,
                 'lcc_id' => $lcc->id,
             ]);
 
@@ -114,7 +130,7 @@ class UpdateCompletionTest extends TestCase
 
         $payload = [
             'user_ids' => [(string) $player->discord_id],
-            'format' => 1,
+            'format' => $this->format->id,
             'black_border' => false,
             'no_geraldo' => false,
             'lcc' => null,
@@ -143,7 +159,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_own_completion_returns_forbidden(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         // Create completion where user is a player
         $completions = CompletionTestHelper::createCompletionsWithMeta(1, $user, accepted: true);
@@ -173,12 +189,13 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_with_scoped_permissions(): void
     {
-        // Has edit:completion for format 51, not format 1
-        $user = $this->createUserWithPermissions([51 => ['edit:completion']]);
+        // Has edit:completion for second format, not first format
+        $secondFormat = Format::factory()->create();
+        $user = $this->createUserWithPermissions([$secondFormat->id => ['edit:completion']]);
 
         $payload = [
             ...$this->requestData(),
-            'format' => 51,
+            'format' => $secondFormat->id,
         ];
 
         $this->actingAs($user, 'discord')
@@ -187,27 +204,28 @@ class UpdateCompletionTest extends TestCase
     }
 
     #[Group('put')]
-    public function test_update_completion_format_51_without_permission_returns_forbidden(): void
+    public function test_update_completion_format_change_without_permission_returns_forbidden(): void
     {
-        // Has edit:completion for format 1, not format 51
-        // Trying to change a format 51 completion to format 1
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        // Has edit:completion for first format, not second format
+        // Trying to change a second format completion to first format
+        $secondFormat = Format::factory()->create();
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
         $player = User::factory()->create();
 
-        // Create format 51 completion
+        // Create second format completion
         $completion = Completion::factory()->create();
         CompletionMeta::factory()
             ->withPlayers([$player])
             ->accepted()
             ->create([
                 'completion_id' => $completion->id,
-                'format_id' => 51
+                'format_id' => $secondFormat->id
             ]);
 
         $payload = [
             ...$this->requestData(),
             'user_ids' => [(string) $player->discord_id],
-            'format' => 1,
+            'format' => $this->format->id,
         ];
 
         $this->actingAs($user, 'discord')
@@ -218,7 +236,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_with_invalid_user_ids(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         $payload = [
             ...$this->requestData(),
@@ -234,7 +252,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_nonexistent_returns_404(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         $this->actingAs($user, 'discord')
             ->putJson('/api/completions/999999', $this->requestData())
@@ -244,7 +262,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_validation_errors_returns_422(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         $payload = [
             'user_ids' => ['not-an-id'],
@@ -268,7 +286,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_missing_required_fields_returns_422(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         $actual = $this->actingAs($user, 'discord')
             ->putJson('/api/completions/' . $this->completion->id, [])
@@ -285,7 +303,7 @@ class UpdateCompletionTest extends TestCase
     #[Group('put')]
     public function test_update_completion_with_invalid_lcc_format(): void
     {
-        $user = $this->createUserWithPermissions([1 => ['edit:completion']]);
+        $user = $this->createUserWithPermissions([$this->format->id => ['edit:completion']]);
 
         $payload = [
             ...$this->requestData(),
