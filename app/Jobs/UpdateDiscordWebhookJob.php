@@ -17,13 +17,15 @@ class UpdateDiscordWebhookJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $completionId;
+    public bool $fail = false;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(int $completionId)
+    public function __construct(int $completionId, bool $fail = false)
     {
         $this->completionId = $completionId;
+        $this->fail = $fail;
     }
 
     /**
@@ -68,7 +70,7 @@ class UpdateDiscordWebhookJob implements ShouldQueue
             $format->run_submission_wh,
             $messageId,
             $payload,
-            fail: false
+            fail: $this->fail
         );
 
         if ($success) {

@@ -186,27 +186,35 @@ class CompletionController extends Controller
     public function destroy(int $cid): JsonResponse
     {
         // Check for latest meta (including deleted)
-        $anyMeta = CompletionMeta::where('completion_id', $cid)
+        $compMeta = CompletionMeta::where('completion_id', $cid)
             ->latest('created_on')
             ->first();
-        if (!$anyMeta) {
+        if (!$compMeta) {
             return response()->json(['error' => 'Completion not found'], 404);
         }
 
         // Check permission
         $user = auth()->guard('discord')->user();
-        if (!$user->hasPermission('delete:completion', $anyMeta->format_id)) {
-            return response()->json(['error' => "Missing delete:completion permission for format {$anyMeta->format_id}"], 403);
+        if (!$user->hasPermission('delete:completion', $compMeta->format_id)) {
+            return response()->json(['error' => "Missing delete:completion permission for format {$compMeta->format_id}"], 403);
         }
 
         // If already deleted, return 204 (idempotent)
-        if ($anyMeta->deleted_on === null) {
-            $anyMeta->update(['deleted_on' => now()]);
+        if ($compMeta->deleted_on === null) {
+            $compMeta->update(['deleted_on' => now()]);
 
             Log::info('Completion deleted', [
                 'completion_id' => $cid,
                 'deleted_by' => $user->discord_id,
             ]);
+
+            // Update webhook if completion was not accepted and has webhook payload
+            if ($compMeta->accepted_by_id === null) {
+                $completion = Completion::find($cid);
+                if ($completion && $completion->subm_wh_payload !== null) {
+                    UpdateDiscordWebhookJob::dispatch($cid, fail: true);
+                }
+            }
         }
 
         return response()->json([], 204);

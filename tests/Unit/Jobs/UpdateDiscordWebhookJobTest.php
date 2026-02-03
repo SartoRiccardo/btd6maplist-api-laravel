@@ -172,4 +172,30 @@ class UpdateDiscordWebhookJobTest extends TestCase
         // Payload should NOT be cleared (webhook update couldn't happen)
         $this->assertEquals($invalidPayload, $completion->fresh()->subm_wh_payload);
     }
+
+    public function test_job_updates_webhook_with_fail_color(): void
+    {
+        $completion = Completion::factory()->create();
+        CompletionMeta::factory()
+            ->withPlayers([$this->player])
+            ->create([
+                'completion_id' => $completion->id,
+                'format_id' => $this->format->id,
+            ]);
+
+        // Set webhook payload directly in DB to avoid model casting
+        $originalPayload = '12345;{"embeds":[{"color":123456}]}';
+        Completion::where('id', $completion->id)->update([
+            'subm_wh_payload' => $originalPayload,
+        ]);
+
+        DiscordWebhookClient::fake(true);
+
+        // Run the job with fail=true
+        $job = new UpdateDiscordWebhookJob($completion->id, fail: true);
+        $job->handle(app(DiscordWebhookClient::class));
+
+        // Assert payload was cleared
+        $this->assertNull($completion->fresh()->subm_wh_payload);
+    }
 }
