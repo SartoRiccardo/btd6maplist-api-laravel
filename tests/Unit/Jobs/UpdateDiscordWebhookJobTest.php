@@ -8,14 +8,10 @@ use App\Models\CompletionMeta;
 use App\Models\Format;
 use App\Models\User;
 use App\Services\Discord\DiscordWebhookClient;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class UpdateDiscordWebhookJobTest extends TestCase
 {
-    use RefreshDatabase;
-
     private User $player;
     private Format $format;
 
