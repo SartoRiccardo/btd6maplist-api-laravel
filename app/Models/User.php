@@ -132,11 +132,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the user's completions.
+     * Get the user's completions through the comp_players junction table.
      */
-    public function completions(): HasMany
+    public function completionMetas(): BelongsToMany
     {
-        return $this->hasMany(Completion::class, 'player_id');
+        return $this->belongsToMany(CompletionMeta::class, 'comp_players', 'user_id', 'run');
+    }
+
+    /**
+     * Get verifications for this user.
+     */
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(Verification::class, 'user_id');
     }
 
     /**

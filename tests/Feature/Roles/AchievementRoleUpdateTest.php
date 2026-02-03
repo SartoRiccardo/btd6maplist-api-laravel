@@ -22,10 +22,9 @@ class AchievementRoleUpdateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Create formats that tests will use
-        $this->format1 = Format::factory()->create(['id' => 1, 'name' => 'Maplist']);
-        $this->format2 = Format::factory()->create(['id' => 2, 'name' => 'Other Format']);
-        $this->format3 = Format::factory()->create(['id' => 51, 'name' => 'Expert List']);
+        [$this->format1, $this->format2, $this->format3] = Format::factory()
+            ->count(3)
+            ->create();
     }
 
     protected function endpoint(): string

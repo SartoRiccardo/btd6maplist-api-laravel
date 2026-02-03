@@ -1,0 +1,25 @@
+meta {
+  name: PUT Accept Completion
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BASE_URL}}/completions/16/accept
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{USER_AUTH_TOKEN}}
+}
+
+body:json {
+  {
+    "user_ids": ["1"],
+    "format": 1,
+    "black_border": false,
+    "no_geraldo": false,
+    "lcc": null
+  }
+}

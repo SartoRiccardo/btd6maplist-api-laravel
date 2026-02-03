@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompletionController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
 use App\Http\Controllers\RoleController;
@@ -136,37 +137,18 @@ Route::get('/server-roles', fn() => response()->noContent(501));
 
 // Completions endpoints
 Route::prefix('completions')->group(function () {
-    /**
-     * 🟢 Easy: Simple recent completions query with limit
-     */
-    Route::get('/recent', fn() => response()->noContent(501));
+    Route::get('/recent', [CompletionController::class, 'recent']);
+    Route::get('/unapproved', [CompletionController::class, 'unapproved']);
 
-    /**
-     * 🟡 Medium: Permission-filtered query + pagination
-     */
-    Route::get('/unapproved', fn() => response()->noContent(501));
+    Route::get('/{cid}', [CompletionController::class, 'show']);
 
-    Route::prefix('{cid}')->group(function () {
-        /**
-         * 🟢 Easy: Single database query by completion ID
-         */
-        Route::get('/', fn() => response()->noContent(501));
+    Route::middleware('discord.auth')
+        ->group(function () {
+            Route::put('/{cid}', [CompletionController::class, 'update']);
+            Route::delete('/{cid}', [CompletionController::class, 'destroy']);
 
-        /**
-         * 🟡 Medium: Permission validation + database update + async logging
-         */
-        Route::put('/', fn() => response()->noContent(501));
-
-        /**
-         * 🟡 Medium: Permission validation + database update + async webhook + logging
-         */
-        Route::put('/accept', fn() => response()->noContent(501));
-
-        /**
-         * 🟡 Medium: Permission checks + conditional async webhook + logging
-         */
-        Route::delete('/', fn() => response()->noContent(501));
-    });
+            Route::put('/{cid}/accept', [CompletionController::class, 'accept']);
+        });
 });
 
 // Roles endpoints
@@ -190,7 +172,7 @@ Route::prefix('users')->group(function () {
 
     Route::prefix('{uid}')->group(function () {
         /**
-         * 🟢 Easy: Database query + optional Ninja Kiwi API call
+         * 🔴 Hard: Surprisingly difficult route to check due to complex queries + optional Ninja Kiwi API call
          */
         Route::get('/', fn() => response()->noContent(501));
 
