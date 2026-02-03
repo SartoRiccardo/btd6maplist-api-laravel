@@ -5,9 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\UpsertCompletionRequest;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
-use App\Models\Config;
 use App\Models\LeastCostChimps;
-use App\Models\Verification;
+use App\Services\VerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +20,11 @@ use Illuminate\Support\Facades\Log;
  */
 class CompletionController extends Controller
 {
+    public function __construct(
+        private VerificationService $verificationService
+    ) {
+    }
+
     /**
      * Get a specific completion by ID.
      *
@@ -249,10 +253,15 @@ class CompletionController extends Controller
         }
 
         $format = $request->input('format');
+        $oldFormat = $currentMeta->format_id;
 
-        // Check permission
-        if (!$user->hasPermission('edit:completion', $format)) {
-            return response()->json(['error' => "Missing edit:completion permission for format {$format}"], 403);
+        // Check permissions for both formats (when changing formats)
+        $allowedFormats = $user->formatsWithPermission('edit:completion');
+        $formats = [$oldFormat, $format];
+
+        if (!in_array(null, $allowedFormats, true) && array_diff($formats, $allowedFormats)) {
+            $missing = array_diff($formats, $allowedFormats);
+            return response()->json(['error' => "Missing edit:completion permission for format(s): " . implode(', ', $missing)], 403);
         }
 
         // Check if user is trying to accept their own completion
@@ -291,79 +300,10 @@ class CompletionController extends Controller
                 'accepted_by' => $user->discord_id,
             ]);
 
-            // Create verifications for formats 1 and 51
-            if (in_array($request->input('format'), [1, 51])) {
-                $this->createVerifications($newMeta->id);
-            }
+            $this->verificationService->createVerificationsForCompletion($newMeta);
         });
 
         return response()->json([], 204);
-    }
-
-    /**
-     * Create verifications for formats 1 and 51.
-     * This replaces the tr_set_verif_on_accept trigger.
-     */
-    protected function createVerifications(int $completionMetaId): void
-    {
-        $completionMeta = CompletionMeta::with('completion', 'players')->find($completionMetaId);
-        $format = $completionMeta->format_id;
-
-        // Only for formats 1 and 51
-        if (!in_array($format, [1, 51])) {
-            return;
-        }
-
-        $completion = Completion::find($completionMeta->completion_id);
-        if (!$completion) {
-            Log::error('Completion not found for verification creation', [
-                'completion_meta_id' => $completionMetaId,
-                'completion_id' => $completionMeta->completion_id,
-            ]);
-            return;
-        }
-
-        $mapCode = $completion->map->code;
-        $currentBtd6Ver = (int) Config::where('name', 'current_btd6_ver')->first()->value;
-
-        DB::transaction(function () use ($completionMeta, $mapCode, $currentBtd6Ver) {
-            // Current version verifier
-            $exists = Verification::where('map_code', $mapCode)
-                ->where('version', $currentBtd6Ver)
-                ->exists();
-
-            if (!$exists) {
-                foreach ($completionMeta->players as $player) {
-                    Verification::firstOrCreate([
-                        'map_code' => $mapCode,
-                        'user_id' => $player->discord_id,
-                        'version' => $currentBtd6Ver,
-                    ]);
-                }
-                Log::info('Created current version verifications', [
-                    'map' => $mapCode,
-                    'version' => $currentBtd6Ver,
-                ]);
-            }
-
-            // First time verifier
-            $exists = Verification::where('map_code', $mapCode)
-                ->whereNull('version')
-                ->exists();
-
-            if (!$exists) {
-                foreach ($completionMeta->players as $player) {
-                    Verification::firstOrCreate([
-                        'map_code' => $mapCode,
-                        'user_id' => $player->discord_id,
-                        'version' => null,
-                    ]);
-                }
-                Log::info('Created first time verifications', [
-                    'map' => $mapCode,
-                ]);
-            }
-        });
     }
 
     /**
