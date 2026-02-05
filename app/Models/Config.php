@@ -72,4 +72,17 @@ class Config extends Model
             default => $value,
         };
     }
+
+    /**
+     * Load multiple config values by name, returning a keyed collection with casted values.
+     *
+     * @param array $names Array of config names to load
+     * @return \Illuminate\Support\Collection Keyed collection with config names as keys and casted values
+     */
+    public static function loadVars(array $names): \Illuminate\Support\Collection
+    {
+        return self::whereIn('name', $names)
+            ->get()
+            ->mapWithKeys(fn ($config) => [$config->name => $config->value]);
+    }
 }

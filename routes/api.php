@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompletionController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
+use App\Http\Controllers\MapController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\AchievementRoleController;
 use Illuminate\Support\Facades\Route;
@@ -34,37 +35,25 @@ Route::prefix('formats')->group(function () {
 
 // Maps endpoints
 Route::prefix('maps')->group(function () {
-    /**
-     * 🟡 Medium: Format-specific queries with conditional filtering logic
-     */
-    Route::get('/', fn() => response()->noContent(501));
+    Route::get('/', [MapController::class, 'index']);
 
     /**
      * 🔴 Hard: File handling + multiple format validation + permission checks + async webhook + logging
      */
     Route::post('/', fn() => response()->noContent(501));
 
-    /**
-     * 🟢 Easy: Simple query with is_deleted filter
-     */
-    Route::get('/legacy', fn() => response()->noContent(501));
+    Route::get('/legacy', [MapController::class, 'legacy']);
 
     /**
      * 🟡 Medium: Complex leaderboard query with CTEs + pagination + format filtering
      */
     Route::get('/leaderboard', fn() => response()->noContent(501));
 
-    /**
-     * 🟡 Medium: Grouped query with complex response structure (by game/category)
-     */
-    Route::get('/retro', fn() => response()->noContent(501));
+    Route::get('/retro', [MapController::class, 'retro']);
 
     // Maps submit endpoints
     Route::prefix('submit')->group(function () {
-        /**
-         * 🔴 Hard: Discord webhook signature validation + complex lookup logic
-         */
-        Route::get('/', fn() => response()->noContent(501));
+        Route::get('/', [MapController::class, 'submissions']);
 
         /**
          * 🔴 Hard: File uploads + duplicate checking + Ninja Kiwi API calls + async webhook notifications
@@ -84,10 +73,7 @@ Route::prefix('maps')->group(function () {
 
     // Map-specific endpoints
     Route::prefix('{code}')->group(function () {
-        /**
-         * 🟢 Easy: Single database query by code
-         */
-        Route::get('/', fn() => response()->noContent(501));
+        Route::get('/', [MapController::class, 'show']);
 
         /**
          * 🔴 Hard: File uploads + database update + async webhook notifications
@@ -101,15 +87,8 @@ Route::prefix('maps')->group(function () {
 
         // Map completions endpoints
         Route::prefix('completions')->group(function () {
-            /**
-             * 🟢 Easy: Simple filtered query for authenticated user
-             */
-            Route::get('/@me', fn() => response()->noContent(501));
-
-            /**
-             * 🟡 Medium: Paginated query + format filtering + permission checks
-             */
-            Route::get('/', fn() => response()->noContent(501));
+            Route::get('/@me', [MapController::class, 'myCompletions'])->middleware('discord.auth');
+            Route::get('/', [MapController::class, 'completions']);
 
             /**
              * 🟡 Medium: Permission validation + user completion checking + database insert

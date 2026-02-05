@@ -31,12 +31,17 @@ class MapFactory extends Factory
     /**
      * Indicate the map has metadata.
      */
-    public function withMeta(): static
+    public function withMeta(array $overrides = []): static
     {
-        return $this->afterCreating(function (Map $map) {
-            MapListMeta::factory()->create([
+        return $this->afterCreating(function (Map $map) use ($overrides) {
+            MapListMeta::factory()->create(array_merge([
                 'code' => $map->code,
-            ]);
+                'placement_curver' => null,
+                'placement_allver' => null,
+                'difficulty' => null,
+                'botb_difficulty' => null,
+                'remake_of' => null,
+            ], $overrides));
         });
     }
 }

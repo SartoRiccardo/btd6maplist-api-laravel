@@ -39,4 +39,19 @@ class Verification extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Get verified map codes for a specific version, filtered by map codes.
+     *
+     * @param int $version The BTD6 version
+     * @param iterable $mapCodes Collection of map codes to filter by
+     * @return \Illuminate\Support\Collection Collection of verified map codes
+     */
+    public static function getVerifiedMapCodes(int $version, iterable $mapCodes): \Illuminate\Support\Collection
+    {
+        return self::where('version', $version)
+            ->whereIn('map_code', $mapCodes)
+            ->distinct()
+            ->pluck('map_code');
+    }
 }
