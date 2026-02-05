@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MapListMeta extends Model
 {
@@ -41,5 +42,13 @@ class MapListMeta extends Model
     public function map(): BelongsTo
     {
         return $this->belongsTo(Map::class, 'code', 'code');
+    }
+
+    /**
+     * Get the retro map this meta remakes.
+     */
+    public function retroMap(): HasOne
+    {
+        return $this->hasOne(RetroMap::class, 'id', 'remake_of');
     }
 }

@@ -25,21 +25,15 @@ class RetroMap extends Model
         'name',
         'sort_order',
         'preview_url',
-        'game_id',
-        'category_id',
-        'subcategory_id',
+        'retro_game_id',
     ];
 
     /**
      * Get the retro game this map belongs to.
-     * Note: This is a composite key relationship.
      */
     public function game()
     {
-        return $this->belongsTo(RetroGame::class, null, null, null)
-            ->whereColumn('retro_games.game_id', 'retro_maps.game_id')
-            ->whereColumn('retro_games.category_id', 'retro_maps.category_id')
-            ->whereColumn('retro_games.subcategory_id', 'retro_maps.subcategory_id');
+        return $this->belongsTo(RetroGame::class, 'retro_game_id');
     }
 
     // -- TestableStructure -- //
@@ -51,9 +45,7 @@ class RetroMap extends Model
             'name' => 'Retro Map',
             'sort_order' => 1,
             'preview_url' => 'https://example.com/preview.jpg',
-            'game_id' => 1,
-            'category_id' => 1,
-            'subcategory_id' => 1,
+            'retro_game_id' => 1,
         ], $overrides);
     }
 
@@ -64,9 +56,7 @@ class RetroMap extends Model
             'name',
             'sort_order',
             'preview_url',
-            'game_id',
-            'category_id',
-            'subcategory_id',
+            'retro_game_id',
         ];
     }
 }
