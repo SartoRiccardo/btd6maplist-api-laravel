@@ -20,6 +20,7 @@ class MapController
      *     tags={"Maps"},
      *     @OA\Parameter(name="timestamp", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/timestamp")),
      *     @OA\Parameter(name="format_id", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/format_id")),
+     *     @OA\Parameter(name="format_subfilter", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/format_subfilter")),
      *     @OA\Parameter(name="page", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/page")),
      *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/per_page")),
      *     @OA\Parameter(name="deleted", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexMapRequest/properties/deleted")),
@@ -48,10 +49,12 @@ class MapController
         $createdBy = $validated['created_by'] ?? null;
         $verifiedBy = $validated['verified_by'] ?? null;
         $formatId = $validated['format_id'] ?? null;
+        $formatSubfilter = $validated['format_subfilter'] ?? null;
 
         // Build query for MapListMeta to get active map codes
         $metaQuery = MapListMeta::with(['retroMap.game'])
             ->forFormat($formatId)
+            ->forFormatSubfilter($formatId, $formatSubfilter)
             ->where('created_on', '<=', $timestamp)
             ->where(function ($query) use ($timestamp) {
                 $query->whereNull('deleted_on')

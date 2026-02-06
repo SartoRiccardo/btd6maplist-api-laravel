@@ -9,6 +9,7 @@ use App\Http\Requests\BaseRequest;
  *     schema="IndexMapRequest",
  *     @OA\Property(property="timestamp", type="integer", description="Unix timestamp to filter maps active at this time", example=1736123456),
  *     @OA\Property(property="format_id", type="integer", description="Format ID filter", example=1),
+ *     @OA\Property(property="format_subfilter", type="integer", description="Format subfilter (difficulty for Expert List, botb_difficulty for BOTB, game_id for Nostalgia Pack)", example=1),
  *     @OA\Property(property="page", type="integer", description="Page number", example=1, minimum=1),
  *     @OA\Property(property="per_page", type="integer", description="Items per page", example=100, minimum=1, maximum=500),
  *     @OA\Property(property="deleted", type="string", enum={"only", "exclude", "any"}, description="Filter by deletion status", example="exclude"),
@@ -39,6 +40,7 @@ class IndexMapRequest extends BaseRequest
         return [
             'timestamp' => ['nullable', 'integer', 'min:0'],
             'format_id' => ['nullable', 'integer', 'min:1', 'exists:formats,id'],
+            'format_subfilter' => ['nullable', 'integer', 'min:0'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
             'deleted' => ['nullable', 'in:only,exclude,any'],

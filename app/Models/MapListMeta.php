@@ -75,8 +75,27 @@ class MapListMeta extends Model
             FormatConstants::BEST_OF_THE_BEST => $query->whereNotNull('botb_difficulty')
                 ->orderBy('botb_difficulty', 'asc'),
             FormatConstants::NOSTALGIA_PACK => $query->whereNotNull('remake_of'),
-
             default => $query, // Unknown format, don't filter
+        };
+    }
+
+    /**
+     * Scope to apply format subfilter.
+     * Only applies when format_id is EXPERT_LIST, BEST_OF_THE_BEST, or NOSTALGIA_PACK.
+     */
+    public function scopeForFormatSubfilter($query, ?int $formatId, ?int $subfilter)
+    {
+        if (!$formatId || $subfilter === null) {
+            return $query;
+        }
+
+        return match ($formatId) {
+            FormatConstants::EXPERT_LIST => $query->where('difficulty', $subfilter),
+            FormatConstants::BEST_OF_THE_BEST => $query->where('botb_difficulty', $subfilter),
+            FormatConstants::NOSTALGIA_PACK => $query->whereHas('retroMap.game', function ($q) use ($subfilter) {
+                $q->where('game_id', $subfilter);
+            }),
+            default => $query, // MAPLIST and MAPLIST_ALL_VERSIONS ignore subfilter
         };
     }
 }
