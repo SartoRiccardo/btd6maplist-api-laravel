@@ -8,13 +8,6 @@ use App\Models\MapListMeta;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-/**
- * @OA\Info(
- *     title="BTD6 Maplist API",
- *     version="2.0.0",
- *     description="API for managing BTD6 map list data"
- * )
- */
 class MapController
 {
     /**

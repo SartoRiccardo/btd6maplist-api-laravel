@@ -6,6 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @OA\Schema(
+ *     schema="RetroGame",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", description="Internal ID", example=1),
+ *     @OA\Property(property="game_id", type="integer", description="External game ID", example=6048),
+ *     @OA\Property(property="category_id", type="integer", description="Category ID", example=888),
+ *     @OA\Property(property="subcategory_id", type="integer", description="Subcategory ID", example=923),
+ *     @OA\Property(property="game_name", type="string", description="Game name", example="harum sit"),
+ *     @OA\Property(property="category_name", type="string", description="Category name", example="dicta"),
+ *     @OA\Property(property="subcategory_name", type="string", description="Subcategory name", example="occaecati")
+ * )
+ */
 class RetroGame extends Model
 {
     use HasFactory;

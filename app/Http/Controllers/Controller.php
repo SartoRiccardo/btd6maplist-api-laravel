@@ -14,6 +14,12 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
  *     @OA\Property(property="per_page", type="integer", description="Number of items per page", example=100),
  *     @OA\Property(property="total", type="integer", description="Total number of items", example=450)
  * )
+ * 
+ * @OA\Info(
+ *     title="BTD6 Maplist API",
+ *     version="2.0.0",
+ *     description="API for managing BTD6 map list data"
+ * )
  */
 abstract class Controller
 {

@@ -24,7 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *     @OA\Property(property="optimal_heros", type="array", nullable=true, @OA\Items(type="string"), description="Optimal heroes for this map"),
  *     @OA\Property(property="botb_difficulty", type="integer", nullable=true, description="Brown Border Bloat difficulty"),
  *     @OA\Property(property="remake_of", type="integer", nullable=true, description="ID of the retro map this is a remake of"),
- *     @OA\Property(property="deleted_on", type="string", format="date-time", nullable=true, description="Timestamp when the map was deleted")
+ *     @OA\Property(property="deleted_on", type="string", format="date-time", nullable=true, description="Timestamp when the map was deleted"),
+ *     @OA\Property(property="retro_map", ref="#/components/schemas/RetroMap", nullable=true, description="Retro map data (only included when format is Nostalgia Pack or remake_of is not null)")
  * )
  */
 class Map extends Model
@@ -124,6 +125,7 @@ class Map extends Model
             'botb_difficulty' => null,
             'remake_of' => null,
             'deleted_on' => null,
+            'retro_map' => null,
         ];
     }
 
@@ -146,6 +148,7 @@ class Map extends Model
             'botb_difficulty',
             'remake_of',
             'deleted_on',
+            'retro_map',
         ];
     }
 }
