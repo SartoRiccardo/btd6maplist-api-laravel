@@ -33,7 +33,7 @@ class MapListMeta extends Model
     ];
 
     protected $casts = [
-        'optimal_heros' => 'array', // PostgreSQL text[] array
+        'optimal_heros' => 'array'
     ];
 
     /**

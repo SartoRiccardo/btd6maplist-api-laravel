@@ -52,6 +52,46 @@ class Map extends Model
             ->orderBy('id', 'desc');
     }
 
+    /**
+     * Get all creators for this map.
+     */
+    public function creators(): HasMany
+    {
+        return $this->hasMany(Creator::class, 'map_code');
+    }
+
+    /**
+     * Get all verifications for this map.
+     */
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(Verification::class, 'map_code');
+    }
+
+    /**
+     * Get all additional codes for this map.
+     */
+    public function additionalCodes(): HasMany
+    {
+        return $this->hasMany(AdditionalCode::class, 'belongs_to', 'code');
+    }
+
+    /**
+     * Get all aliases for this map.
+     */
+    public function aliases(): HasMany
+    {
+        return $this->hasMany(MapAlias::class, 'map_code');
+    }
+
+    /**
+     * Get all compatibilities for this map.
+     */
+    public function compatibilities(): HasMany
+    {
+        return $this->hasMany(MapverCompatibility::class, 'map_code');
+    }
+
     // -- TestableStructure -- //
 
     protected static function defaults(array $overrides = []): array

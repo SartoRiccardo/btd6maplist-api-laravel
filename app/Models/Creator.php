@@ -10,7 +10,8 @@ class Creator extends Pivot
     use HasFactory;
 
     public $timestamps = false;
-    public $incrementing = true;
+    public $incrementing = false;
+    protected $primaryKey = null;
 
     protected $table = 'creators';
 

@@ -11,6 +11,7 @@ use App\Models\Config;
 use App\Models\Map;
 use App\Models\MapListMeta;
 use App\Models\RetroMap;
+use App\Services\MapService;
 use App\Models\Verification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -275,7 +276,6 @@ class MapController extends Controller
      *         @OA\Property(property="verifications", type="array", @OA\Items(type="object")),
      *         @OA\Property(property="is_verified", type="boolean"),
      *         @OA\Property(property="lccs", type="array", @OA\Items(type="object")),
-     *         @OA\Property(property="compatibilities", type="array", @OA\Items(type="object")),
      *         @OA\Property(property="aliases", type="array", @OA\Items(type="string"))
      *     )),
      *     @OA\Response(response=404, description="No map with that ID was found")
@@ -283,97 +283,35 @@ class MapController extends Controller
      */
     public function show(string $code): JsonResponse
     {
-        $searchCode = str_replace(' ', '_', $code);
-        $timestamp = now();
+        // Find the map code by various identifiers
+        $mapCode = MapService::getPossibleMap($code);
 
-        $map = DB::select("
-            WITH config_values AS (
-                SELECT
-                    (SELECT value::int FROM config WHERE name='current_btd6_ver') AS current_btd6_ver
-            ),
-            verified_maps AS (
-                SELECT v.map_code, COUNT(*) > 0 AS is_verified
-                FROM verifications v
-                CROSS JOIN config_values cv
-                WHERE v.version = cv.current_btd6_ver
-                GROUP BY v.map_code
-            ),
-            possible_map AS (
-                SELECT * FROM (
-                    SELECT 1 AS ord, m.code, m.name, m.r6_start, m.map_data, mlm.optimal_heros, m.map_preview_url, m.map_notes, mlm.botb_difficulty, mlm.remake_of,
-                           mlm.placement_curver, mlm.placement_allver, mlm.difficulty, mlm.deleted_on
-                    FROM maps m
-                    JOIN latest_maps_meta(?) mlm ON m.code = mlm.code
-                    WHERE m.code = ? AND mlm.deleted_on IS NULL
-
-                    UNION
-
-                    SELECT 2 AS ord, m.code, m.name, m.r6_start, m.map_data, mlm.optimal_heros, m.map_preview_url, m.map_notes, mlm.botb_difficulty, mlm.remake_of,
-                           mlm.placement_curver, mlm.placement_allver, mlm.difficulty, mlm.deleted_on
-                    FROM maps m
-                    JOIN latest_maps_meta(?) mlm ON m.code = mlm.code
-                    WHERE LOWER(m.name) = LOWER(?) AND mlm.deleted_on IS NULL
-
-                    UNION
-
-                    SELECT 4 AS ord, m.code, m.name, m.r6_start, m.map_data, mlm.optimal_heros, m.map_preview_url, m.map_notes, mlm.botb_difficulty, mlm.remake_of,
-                           mlm.placement_curver, mlm.placement_allver, mlm.difficulty, mlm.deleted_on
-                    FROM maps m
-                    JOIN map_list_meta mlm ON m.code = mlm.code
-                    JOIN map_aliases a ON m.code = a.map
-                    WHERE LOWER(a.alias) = LOWER(?) OR LOWER(a.alias) = LOWER(?)
-
-                    UNION
-
-                    (
-                        SELECT 6 AS ord, m.code, m.name, m.r6_start, m.map_data, mlm.optimal_heros, m.map_preview_url, m.map_notes, mlm.botb_difficulty, mlm.remake_of,
-                               mlm.placement_curver, mlm.placement_allver, mlm.difficulty, mlm.deleted_on
-                        FROM maps m
-                        JOIN map_list_meta mlm ON m.code = mlm.code
-                        WHERE m.code = ? AND mlm.deleted_on IS NOT NULL
-                        ORDER BY mlm.created_on DESC
-                        LIMIT 1
-                    )
-
-                    UNION
-
-                    (
-                        SELECT 7 AS ord, m.code, m.name, m.r6_start, m.map_data, mlm.optimal_heros, m.map_preview_url, m.map_notes, mlm.botb_difficulty, mlm.remake_of,
-                               mlm.placement_curver, mlm.placement_allver, mlm.difficulty, mlm.deleted_on
-                        FROM maps m
-                        JOIN map_list_meta mlm ON m.code = mlm.code
-                        WHERE LOWER(m.name) = LOWER(?) AND mlm.deleted_on IS NOT NULL
-                        ORDER BY mlm.created_on DESC
-                        LIMIT 1
-                    )
-                ) possible
-                ORDER BY ord
-                LIMIT 1
-            )
-            SELECT
-                pm.code, pm.name, pm.placement_curver, pm.placement_allver, pm.difficulty,
-                pm.r6_start, pm.map_data, v.is_verified, pm.deleted_on,
-                pm.optimal_heros, pm.map_preview_url, pm.botb_difficulty,
-                pm.remake_of, pm.map_notes
-            FROM possible_map pm
-            LEFT JOIN verified_maps v ON v.map_code = pm.code
-        ", [
-            $timestamp,
-            $searchCode,
-            $timestamp,
-            $code,
-            $searchCode,
-            $code,
-            $searchCode,
-            $code,
-        ]);
-
-        if (empty($map)) {
+        if ($mapCode === null) {
             return response()->json(['error' => 'No map with that ID was found'], 404);
         }
 
-        $map = $map[0];
-        $mapCode = $map->code;
+        // Get config for verification check
+        $config = Config::loadVars(['current_btd6_ver']);
+        $currentBtd6Ver = $config->get('current_btd6_ver');
+
+        // Get map with relationships
+        $map = Map::with([
+            'latestMeta',
+            'creators.user',
+            'verifications.user',
+            'additionalCodes',
+            'aliases',
+        ])->find($mapCode);
+
+        if (!$map || !$map->latestMeta) {
+            return response()->json(['error' => 'No map with that ID was found'], 404);
+        }
+
+        $meta = $map->latestMeta;
+
+        // Check if verified from eager loaded verifications
+        $isVerified = $map->verifications
+            ->contains(fn($v) => $v->version === $currentBtd6Ver);
 
         // Fetch related data
         $lccs = DB::table('lccs_by_map')
@@ -385,74 +323,50 @@ class MapController extends Controller
                 'leftover' => $lcc->leftover,
             ])->toArray();
 
-        $additionalCodes = DB::table('additional_codes')
-            ->where('belongs_to', $mapCode)
-            ->get()
-            ->map(fn($ac) => [
-                'code' => $ac->code,
-                'description' => $ac->description,
-            ])->toArray();
+        $creators = $map->creators->map(fn($c) => [
+            'user_id' => (string) $c->user_id,
+            'role' => $c->role,
+            'name' => $c->user->name,
+        ])->toArray();
 
-        $creators = DB::table('creators')
-            ->join('users', 'creators.user_id', '=', 'users.discord_id')
-            ->where('map_code', $mapCode)
-            ->get()
-            ->map(fn($c) => [
-                'user_id' => (string) $c->user_id,
-                'role' => $c->role,
-                'name' => $c->name,
-            ])->toArray();
-
-        $verifications = DB::table('verifications')
-            ->join('users', 'verifications.user_id', '=', 'users.discord_id')
-            ->where('map_code', $mapCode)
-            ->where(function ($q) {
-                $q->whereNull('version')
-                    ->orWhere('version', DB::raw('(SELECT value::int FROM config WHERE name=\'current_btd6_ver\')'));
-            })
-            ->orderByRaw('version ASC NULLS FIRST')
-            ->get()
+        // Filter verifications for current version or null
+        $verifications = $map->verifications
+            ->filter(fn($v) => $v->version === null || $v->version === $currentBtd6Ver)
+            ->sortBy(fn($v) => $v->version ?? '0')
             ->map(fn($v) => [
                 'user_id' => (string) $v->user_id,
                 'version' => $v->version ? $v->version / 10 : null,
-                'name' => $v->name,
-            ])->toArray();
-
-        $compatibilities = DB::table('mapver_compatibilities')
-            ->where('map_code', $mapCode)
-            ->get()
-            ->map(fn($c) => [
-                'status' => $c->status,
-                'version' => $c->version,
-            ])->toArray();
-
-        $aliases = DB::table('map_aliases')
-            ->where('map_code', $mapCode)
-            ->pluck('alias')
+                'name' => $v->user->name,
+            ])
+            ->values()
             ->toArray();
 
-        $optimalHeroes = $map->optimal_heros ? explode(';', $map->optimal_heros) : [];
+        $additionalCodes = $map->additionalCodes->map(fn($ac) => [
+            'code' => $ac->code,
+            'description' => $ac->description,
+        ])->toArray();
+
+        $aliases = $map->aliases->pluck('alias')->toArray();
 
         return response()->json([
             'code' => $map->code,
             'name' => $map->name,
-            'placement_curver' => $map->placement_curver,
-            'placement_allver' => $map->placement_allver,
-            'difficulty' => $map->difficulty,
-            'botb_difficulty' => $map->botb_difficulty,
-            'remake_of' => $map->remake_of,
+            'placement_curver' => $meta->placement_curver,
+            'placement_allver' => $meta->placement_allver,
+            'difficulty' => $meta->difficulty,
+            'botb_difficulty' => $meta->botb_difficulty,
+            'remake_of' => $meta->remake_of,
             'r6_start' => $map->r6_start,
             'map_data' => $map->map_data,
-            'deleted_on' => $map->deleted_on,
-            'optimal_heros' => $optimalHeroes,
+            'deleted_on' => $meta->deleted_on,
+            'optimal_heros' => $meta->optimal_heros ?? [],
             'map_preview_url' => $map->map_preview_url,
             'map_notes' => $map->map_notes,
             'creators' => $creators,
             'additional_codes' => $additionalCodes,
             'verifications' => $verifications,
-            'is_verified' => $map->is_verified,
+            'is_verified' => $isVerified,
             'lccs' => $lccs,
-            'compatibilities' => $compatibilities,
             'aliases' => $aliases,
         ]);
     }

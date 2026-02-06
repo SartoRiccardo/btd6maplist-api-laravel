@@ -32,3 +32,6 @@ old-api
 
 # Robots
 CLAUDE.md
+GEMINI.md
+.claude
+.gemini
