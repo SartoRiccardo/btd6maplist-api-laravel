@@ -20,10 +20,6 @@ class Map extends Model
 
     public $incrementing = false;
 
-    protected $hidden = [
-        'latestMeta',
-    ];
-
     protected $fillable = [
         'code',
         'name',

@@ -51,7 +51,6 @@ class Completion extends Model
         'proofs',
         'completionMetas',
         'meta',
-        'latestMeta',
         'map_code',
     ];
 
@@ -67,17 +66,6 @@ class Completion extends Model
     protected $casts = [
         'submitted_on' => 'timestamp',
     ];
-
-    /**
-     * Get the latest (current) metadata for this completion.
-     * This uses the latest_completions view logic.
-     */
-    public function latestMeta(): HasOne
-    {
-        return $this->hasOne(CompletionMeta::class, 'completion_id')
-            ->orderBy('created_on', 'desc')
-            ->orderBy('id', 'desc');
-    }
 
     /**
      * Get the map for this completion.
