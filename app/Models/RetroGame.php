@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @OA\Schema(
  *     schema="RetroGame",
  *     type="object",
- *     @OA\Property(property="id", type="integer", description="Internal ID", example=1),
  *     @OA\Property(property="game_id", type="integer", description="External game ID", example=6048),
  *     @OA\Property(property="category_id", type="integer", description="Category ID", example=888),
  *     @OA\Property(property="subcategory_id", type="integer", description="Subcategory ID", example=923),
@@ -33,6 +32,10 @@ class RetroGame extends Model
         'game_name',
         'category_name',
         'subcategory_name',
+    ];
+
+    protected $hidden = [
+        'id',
     ];
 
     /**
