@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,15 +14,22 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *     type="object",
  *     @OA\Property(property="code", type="string", description="Unique map code", example="TKIEXYSQ"),
  *     @OA\Property(property="name", type="string", description="Map name", example="In The Loop"),
- *     @OA\Property(property="r6_start", type="integer", description="BTD6 version when map was added", example=10),
+ *     @OA\Property(property="r6_start", type="integer", nullable=true, description="BTD6 version when map was added", example=10),
  *     @OA\Property(property="map_data", type="string", nullable=true, description="Map data JSON"),
- *     @OA\Property(property="map_preview_url", type="string", nullable=true, description="URL to map preview image"),
- *     @OA\Property(property="map_notes", type="string", nullable=true, description="Additional notes about the map")
+ *     @OA\Property(property="map_preview_url", type="string", description="URL to map preview image (defaults to Ninja Kiwi data server)", example="https://data.ninjakiwi.com/btd6/maps/map/TKIEXYSQ/preview"),
+ *     @OA\Property(property="map_notes", type="string", nullable=true, description="Additional notes about the map"),
+ *     @OA\Property(property="placement_curver", type="integer", nullable=true, description="Placement in current version leaderboard"),
+ *     @OA\Property(property="placement_allver", type="integer", nullable=true, description="Placement in all-time leaderboard"),
+ *     @OA\Property(property="difficulty", type="integer", nullable=true, description="Map difficulty level"),
+ *     @OA\Property(property="optimal_heros", type="array", nullable=true, @OA\Items(type="string"), description="Optimal heroes for this map"),
+ *     @OA\Property(property="botb_difficulty", type="integer", nullable=true, description="Brown Border Bloat difficulty"),
+ *     @OA\Property(property="remake_of", type="integer", nullable=true, description="ID of the retro map this is a remake of"),
+ *     @OA\Property(property="deleted_on", type="string", format="date-time", nullable=true, description="Timestamp when the map was deleted")
  * )
  */
 class Map extends Model
 {
-    use HasFactory;
+    use HasFactory, TestableStructure;
 
     public $timestamps = false;
 
@@ -94,5 +102,49 @@ class Map extends Model
     public function compatibilities(): HasMany
     {
         return $this->hasMany(MapverCompatibility::class, 'map_code');
+    }
+
+    /**
+     * Get the default values for the Map JSON structure.
+     */
+    protected static function defaults(array $overrides = []): array
+    {
+        return [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'r6_start' => null,
+            'map_data' => null,
+            'map_preview_url' => 'https://data.ninjakiwi.com/btd6/maps/map/TESTCODE/preview',
+            'map_notes' => null,
+            'placement_curver' => null,
+            'placement_allver' => null,
+            'difficulty' => null,
+            'optimal_heros' => [],
+            'botb_difficulty' => null,
+            'remake_of' => null,
+            'deleted_on' => null,
+        ];
+    }
+
+    /**
+     * Get the fields that are allowed when strict mode is enabled.
+     */
+    protected static function strictFields(): array
+    {
+        return [
+            'code',
+            'name',
+            'r6_start',
+            'map_data',
+            'map_preview_url',
+            'map_notes',
+            'placement_curver',
+            'placement_allver',
+            'difficulty',
+            'optimal_heros',
+            'botb_difficulty',
+            'remake_of',
+            'deleted_on',
+        ];
     }
 }
