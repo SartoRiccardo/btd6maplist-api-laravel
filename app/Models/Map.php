@@ -109,12 +109,13 @@ class Map extends Model
      */
     protected static function defaults(array $overrides = []): array
     {
+        $code = $overrides['code'] ?? 'TESTCODE';
         return [
-            'code' => 'TESTCODE',
+            'code' => $code,
             'name' => 'Test Map',
             'r6_start' => null,
             'map_data' => null,
-            'map_preview_url' => 'https://data.ninjakiwi.com/btd6/maps/map/TESTCODE/preview',
+            'map_preview_url' => "https://data.ninjakiwi.com/btd6/maps/map/{$code}/preview",
             'map_notes' => null,
             'placement_curver' => null,
             'placement_allver' => null,
