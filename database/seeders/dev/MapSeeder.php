@@ -4,6 +4,7 @@ namespace Database\Seeders\Dev;
 
 use App\Models\Map;
 use App\Models\MapListMeta;
+use App\Models\RetroMap;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Http;
@@ -118,9 +119,21 @@ class MapSeeder extends Seeder
         $mapCodes = array_column($this->mapsToInsert, 'code');
         $this->command->info("Creating MapListMeta for " . count($mapCodes) . " maps...");
 
+        // Get available retro map IDs
+        $availableRetroMapIds = RetroMap::inRandomOrder()->limit(count($this->mapsToInsert))->pluck('id');
+        $remakeCount = 0;
+
         // Build all meta entries first
         $metaEntries = [];
         foreach ($mapCodes as $index => $code) {
+            $remakeOf = null;
+
+            // 30% chance to assign a retro map as remake
+            if ($this->faker->boolean(30) && $availableRetroMapIds->isNotEmpty()) {
+                $remakeOf = $availableRetroMapIds->pop();
+                $remakeCount++;
+            }
+
             $metaEntries[$code] = [
                 'code' => $code,
                 'placement_curver' => null,
@@ -131,7 +144,7 @@ class MapSeeder extends Seeder
                     $this->faker->numberBetween(0, 3)
                 ),
                 'botb_difficulty' => $index % 5,
-                'remake_of' => null,
+                'remake_of' => $remakeOf,
                 'created_on' => now(),
                 'deleted_on' => null,
             ];
@@ -145,6 +158,8 @@ class MapSeeder extends Seeder
                 $metaEntries[$code]['placement_allver'] = $index - 10 + 1;
             }
         }
+
+        $this->command->info("Assigned {$remakeCount} retro maps as remakes.");
 
         // Update/create all entries
         foreach ($metaEntries as $code => $meta) {

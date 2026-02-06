@@ -54,9 +54,11 @@ class MapController
         $deleted = $validated['deleted'] ?? 'exclude';
         $createdBy = $validated['created_by'] ?? null;
         $verifiedBy = $validated['verified_by'] ?? null;
+        $formatId = $validated['format_id'] ?? null;
 
         // Build query for MapListMeta to get active map codes
-        $metaQuery = MapListMeta::query()
+        $metaQuery = MapListMeta::with(['retroMap.game'])
+            ->forFormat($formatId)
             ->where('created_on', '<=', $timestamp)
             ->where(function ($query) use ($timestamp) {
                 $query->whereNull('deleted_on')

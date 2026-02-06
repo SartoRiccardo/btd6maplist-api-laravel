@@ -18,6 +18,7 @@ class DevSeeder extends Seeder
             $this->call([
                 \Database\Seeders\DatabaseSeeder::class,
                 \Database\Seeders\Dev\UserSeeder::class,
+                \Database\Seeders\Dev\RetroSeeder::class,
                 \Database\Seeders\Dev\MapSeeder::class,
                 \Database\Seeders\Dev\CreatorSeeder::class,
                 \Database\Seeders\Dev\VerificationSeeder::class,
