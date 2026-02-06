@@ -5,38 +5,12 @@ namespace App\Models;
 use App\Constants\FormatConstants;
 use App\Casts\MapSubmissionStatusCast;
 use App\Casts\RunSubmissionStatusCast;
-use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * @OA\Schema(
- *     schema="Format",
- *     type="object",
- *     @OA\Property(property="id", type="integer", description="The ID of the format"),
- *     @OA\Property(property="name", type="string", description="The name of the format"),
- *     @OA\Property(property="hidden", type="boolean", description="Whether maps with this format should be hidden"),
- *     @OA\Property(property="map_submission_status", type="string", enum={"closed", "open", "open_chimps"}, description="Whether map submissions are open, closed, or open_chimps"),
- *     @OA\Property(property="run_submission_status", type="string", enum={"closed", "open", "lcc_only"}, description="Whether run submissions are open, closed, or lcc_only"),
- *     @OA\Property(property="proposed_difficulties", type="array", items={ "type"="string" }, nullable=true, description="What difficulties can be proposed by map submitters")
- * )
- */
-/**
- * @OA\Schema(
- *     schema="FullFormat",
- *     allOf={
- *         @OA\Schema(ref="#/components/schemas/Format"),
- *         @OA\Schema(
- *             @OA\Property(property="map_submission_wh", type="string", nullable=true, description="Discord webhook URL for map submissions"),
- *             @OA\Property(property="run_submission_wh", type="string", nullable=true, description="Discord webhook URL for run submissions"),
- *             @OA\Property(property="emoji", type="string", nullable=true, description="Discord emoji for the format")
- *         )
- *     }
- * )
- */
 class Format extends Model
 {
-    use HasFactory, TestableStructure;
+    use HasFactory;
 
     public $timestamps = false;
 
@@ -105,38 +79,6 @@ class Format extends Model
             'map_submission_wh' => $this->map_submission_wh,
             'run_submission_wh' => $this->run_submission_wh,
             'emoji' => $this->emoji,
-        ];
-    }
-
-    // -- TestableStructure -- //
-
-    protected static function defaults(array $overrides = []): array
-    {
-        return array_merge([
-            'id' => 0,
-            'name' => 'Test Format',
-            'hidden' => false,
-            'map_submission_status' => 'open',
-            'run_submission_status' => 'open',
-            'proposed_difficulties' => null,
-            'map_submission_wh' => null,
-            'run_submission_wh' => null,
-            'emoji' => null,
-        ], $overrides);
-    }
-
-    protected static function strictFields(): array
-    {
-        return [
-            'id',
-            'name',
-            'hidden',
-            'map_submission_status',
-            'run_submission_status',
-            'proposed_difficulties',
-            'map_submission_wh',
-            'run_submission_wh',
-            'emoji',
         ];
     }
 }

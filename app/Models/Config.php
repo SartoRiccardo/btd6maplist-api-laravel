@@ -65,7 +65,7 @@ class Config extends Model
      */
     public function castValue($value, string $type): mixed
     {
-        return match($type) {
+        return match ($type) {
             'int' => (int) $value,
             'float' => (float) $value,
             'string' => (string) $value,
@@ -83,6 +83,6 @@ class Config extends Model
     {
         return self::whereIn('name', $names)
             ->get()
-            ->mapWithKeys(fn ($config) => [$config->name => $config->value]);
+            ->mapWithKeys(fn($config) => [$config->name => $config->value]);
     }
 }

@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DiscordRole extends Model
 {
-    use HasFactory, TestableStructure;
+    use HasFactory;
 
     public $timestamps = false;
     public $incrementing = false;
@@ -41,21 +40,5 @@ class DiscordRole extends Model
     public function achievementRole()
     {
         return $this->belongsTo(AchievementRole::class, 'ar_lb_format', 'lb_format');
-    }
-
-    protected static function defaults(array $overrides = []): array
-    {
-        return array_merge([
-            'guild_id' => '123456789012345678',
-            'role_id' => '987654321098765432',
-        ], $overrides);
-    }
-
-    protected static function strictFields(): array
-    {
-        return [
-            'guild_id',
-            'role_id',
-        ];
     }
 }

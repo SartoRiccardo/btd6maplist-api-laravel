@@ -3,7 +3,9 @@
 namespace App\Jobs;
 
 use App\Models\Completion;
+use App\Models\CompletionMeta;
 use App\Models\Format;
+use App\Models\MapListMeta;
 use App\Services\Discord\DiscordWebhookClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -55,7 +57,11 @@ class UpdateDiscordWebhookJob implements ShouldQueue
         }
 
         // Get the format to retrieve webhook URL
-        $meta = $completion->latestMeta;
+        $meta = CompletionMeta::where('completion_id', $completion->id)
+            ->whereNull('deleted_on')
+            ->orderBy('created_on', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
         if (!$meta) {
             return;
         }

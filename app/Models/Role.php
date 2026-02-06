@@ -2,21 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * @OA\Schema(
- *     schema="Role",
- *     @OA\Property(property="id", type="integer"),
- *     @OA\Property(property="name", type="string"),
- *     @OA\Property(property="can_grant", type="array", @OA\Items(type="integer"))
- * )
- */
 class Role extends Model
 {
-    use HasFactory, TestableStructure;
+    use HasFactory;
 
     public $timestamps = false;
 
@@ -66,23 +57,5 @@ class Role extends Model
             return $relation ? $relation->pluck('id')->toArray() : [];
         }
         return [];
-    }
-
-    protected static function defaults(array $overrides = []): array
-    {
-        return array_merge([
-            'id' => 0,
-            'name' => 'Test Role',
-            'can_grant' => [],
-        ], $overrides);
-    }
-
-    protected static function strictFields(): array
-    {
-        return [
-            'id',
-            'name',
-            'can_grant',
-        ];
     }
 }
