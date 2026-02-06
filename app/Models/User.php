@@ -8,34 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-/**
- * @OA\Schema(
- *     schema="UserProfile",
- *     @OA\Property(property="id", type="string", example="2000000"),
- *     @OA\Property(property="name", type="string", example="test_new_usr"),
- *     @OA\Property(property="oak", type="string", nullable=true),
- *     @OA\Property(property="has_seen_popup", type="boolean", example=false),
- *     @OA\Property(property="is_banned", type="boolean", example=false),
- *     @OA\Property(
- *         property="permissions",
- *         type="array",
- *         @OA\Items(type="object")
- *     ),
- *     @OA\Property(
- *         property="roles",
- *         type="array",
- *         @OA\Items(type="object")
- *     ),
- *     @OA\Property(
- *         property="completions",
- *         type="array",
- *         @OA\Items(type="object")
- *     )
- * )
- */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     public $timestamps = false;
@@ -43,17 +17,17 @@ class User extends Authenticatable
     protected $keyType = 'bigint';
     public $incrementing = false;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'discord_id',
         'name',
         'nk_oak',
         'has_seen_popup',
         'is_banned',
+    ];
+
+    protected $hidden = [
+        'nk_oak',
+        'has_seen_popup',
     ];
 
     /**
@@ -145,22 +119,5 @@ class User extends Authenticatable
     public function verifications(): HasMany
     {
         return $this->hasMany(Verification::class, 'user_id');
-    }
-
-    /**
-     * Convert the model to its array representation for API responses.
-     */
-    public function toArray(): array
-    {
-        return [
-            'id' => (string) $this->discord_id,
-            'name' => $this->name,
-            'oak' => $this->nk_oak,
-            'has_seen_popup' => $this->has_seen_popup,
-            'is_banned' => $this->is_banned,
-            'permissions' => $this->permissions,
-            'roles' => $this->relationLoaded('roles') ? $this->roles->toArray() : [],
-            'completions' => $this->relationLoaded('completions') ? $this->completions->toArray() : [],
-        ];
     }
 }

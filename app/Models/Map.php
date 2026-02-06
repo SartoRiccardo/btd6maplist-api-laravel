@@ -7,6 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @OA\Schema(
+ *     schema="Map",
+ *     type="object",
+ *     @OA\Property(property="code", type="string", description="Unique map code", example="TKIEXYSQ"),
+ *     @OA\Property(property="name", type="string", description="Map name", example="In The Loop"),
+ *     @OA\Property(property="r6_start", type="integer", description="BTD6 version when map was added", example=10),
+ *     @OA\Property(property="map_data", type="string", nullable=true, description="Map data JSON"),
+ *     @OA\Property(property="map_preview_url", type="string", nullable=true, description="URL to map preview image"),
+ *     @OA\Property(property="map_notes", type="string", nullable=true, description="Additional notes about the map")
+ * )
+ */
 class Map extends Model
 {
     use HasFactory;
@@ -29,22 +41,19 @@ class Map extends Model
     ];
 
     /**
+     * Get the map preview URL, with a default to Ninja Kiwi's data server.
+     */
+    protected function getMapPreviewUrlAttribute(): ?string
+    {
+        return $this->attributes['map_preview_url'] ?? "https://data.ninjakiwi.com/btd6/maps/map/{$this->code}/preview";
+    }
+
+    /**
      * Get all completions for this map.
      */
     public function completions(): HasMany
     {
         return $this->hasMany(Completion::class, 'map_code');
-    }
-
-    /**
-     * Get the latest (current) metadata for this map.
-     */
-    public function latestMeta(): HasOne
-    {
-        return $this->hasOne(MapListMeta::class, 'code', 'code')
-            ->whereNull('deleted_on')
-            ->orderBy('created_on', 'desc')
-            ->orderBy('id', 'desc');
     }
 
     /**
