@@ -1,6 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConfigController;
+use App\Http\Controllers\FormatController;
+use App\Http\Controllers\RetroMapController;
+use App\Http\Controllers\MapController;
+use App\Http\Controllers\CompletionController;
+use App\Http\Controllers\DiscordUtilitiesController;
+use App\Http\Controllers\PlatformRoleController;
+use App\Http\Controllers\AchievementRoleController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ImageGeneratorController;
 
 // Auth endpoints
 Route::post('/auth', [AuthController::class, 'authenticate'])
