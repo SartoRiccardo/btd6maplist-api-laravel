@@ -14,7 +14,10 @@ trait TestableStructure
      */
     public static function jsonStructure(array $overrides = [], bool $strict = true, array $exclude = []): array
     {
-        $defaults = static::defaults($overrides);
+        $defaults = [
+            ...static::defaults($overrides),
+            ...$overrides,
+        ];
 
         if ($strict) {
             $allowedFields = array_flip(static::strictFields());
