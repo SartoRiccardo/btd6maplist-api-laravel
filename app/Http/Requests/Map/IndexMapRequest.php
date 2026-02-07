@@ -42,7 +42,7 @@ class IndexMapRequest extends BaseRequest
             'format_id' => ['nullable', 'integer', 'min:1', 'exists:formats,id'],
             'format_subfilter' => ['nullable', 'integer', 'min:0'],
             'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:150'],
             'deleted' => ['nullable', 'in:only,exclude,any'],
             'created_by' => ['nullable', 'integer', 'min:1'],
             'verified_by' => ['nullable', 'integer', 'min:1'],

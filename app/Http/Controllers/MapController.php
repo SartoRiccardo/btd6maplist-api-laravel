@@ -7,6 +7,7 @@ use App\Models\Map;
 use App\Models\MapListMeta;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MapController
 {
@@ -51,21 +52,29 @@ class MapController
         $formatId = $validated['format_id'] ?? null;
         $formatSubfilter = $validated['format_subfilter'] ?? null;
 
+
+        // Get latest metadata for timestamp CTE
+        $latsetMetaCte = MapListMeta::selectRaw('DISTINCT ON (code) *')
+            ->where('created_on', '<=', $timestamp)
+            ->orderBy('code')
+            ->orderBy('created_on', 'desc');
+
         // Build query for MapListMeta to get active map codes
-        $metaQuery = MapListMeta::with(['retroMap.game'])
+        $metaQuery = MapListMeta::from(DB::raw("({$latsetMetaCte->toSql()}) as map_list_meta"))
+            ->setBindings($latsetMetaCte->getBindings())
+            ->with(['retroMap.game'])
             ->forFormat($formatId)
             ->forFormatSubfilter($formatId, $formatSubfilter)
-            ->where('created_on', '<=', $timestamp)
-            ->where(function ($query) use ($timestamp) {
-                $query->whereNull('deleted_on')
-                    ->orWhere('deleted_on', '>', $timestamp);
-            });
+            ->sortForFormat($formatId);
 
         // Apply deleted filter
         if ($deleted === 'only') {
             $metaQuery->whereNotNull('deleted_on');
         } elseif ($deleted === 'exclude') {
-            $metaQuery->whereNull('deleted_on');
+            $metaQuery->where(function ($query) use ($timestamp) {
+                $query->whereNull('deleted_on')
+                    ->orWhere('deleted_on', '>', $timestamp);
+            });
         }
 
         // Apply created_by filter
@@ -83,9 +92,7 @@ class MapController
         }
 
         // Get distinct map codes
-        $metaCodes = $metaQuery
-            ->distinct()
-            ->paginate($perPage, ['*'], 'page', $page);
+        $metaCodes = $metaQuery->paginate($perPage, ['*'], 'page', $page);
 
         $maps = Map::whereIn('code', $metaCodes->pluck('code'))
             ->get();

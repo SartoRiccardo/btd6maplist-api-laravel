@@ -66,17 +66,29 @@ class MapListMeta extends Model
         $mapCount = Config::loadVars(['map_count'])->get('map_count', 50);
 
         return match ($formatId) {
-            FormatConstants::MAPLIST => $query->whereBetween('placement_curver', [1, $mapCount])
-                ->orderBy('placement_curver', 'asc'),
-            FormatConstants::MAPLIST_ALL_VERSIONS => $query->whereBetween('placement_allver', [1, $mapCount])
-                ->orderBy('placement_allver', 'asc'),
-            FormatConstants::EXPERT_LIST => $query->whereNotNull('difficulty')
-                ->orderBy('difficulty', 'asc'),
-            FormatConstants::BEST_OF_THE_BEST => $query->whereNotNull('botb_difficulty')
-                ->orderBy('botb_difficulty', 'asc'),
+            FormatConstants::MAPLIST => $query->whereBetween('placement_curver', [1, $mapCount]),
+            FormatConstants::MAPLIST_ALL_VERSIONS => $query->whereBetween('placement_allver', [1, $mapCount]),
+            FormatConstants::EXPERT_LIST => $query->whereNotNull('difficulty'),
+            FormatConstants::BEST_OF_THE_BEST => $query->whereNotNull('botb_difficulty'),
             FormatConstants::NOSTALGIA_PACK => $query->whereNotNull('remake_of'),
             default => $query, // Unknown format, don't filter
         };
+    }
+
+    /**
+     * Scope to sort based on the given format_id
+     */
+    public function scopeSortForFormat($query, ?int $formatId)
+    {
+        $query = match ($formatId) {
+            FormatConstants::MAPLIST => $query->orderBy('placement_curver', 'asc'),
+            FormatConstants::MAPLIST_ALL_VERSIONS => $query->orderBy('placement_allver', 'asc'),
+            FormatConstants::EXPERT_LIST => $query->orderBy('difficulty', 'asc'),
+            FormatConstants::BEST_OF_THE_BEST => $query->orderBy('botb_difficulty', 'asc'),
+            default => $query, // Unknown format
+        };
+
+        return $query->orderBy('created_on', 'asc');
     }
 
     /**
@@ -93,8 +105,8 @@ class MapListMeta extends Model
             FormatConstants::EXPERT_LIST => $query->where('difficulty', $subfilter),
             FormatConstants::BEST_OF_THE_BEST => $query->where('botb_difficulty', $subfilter),
             FormatConstants::NOSTALGIA_PACK => $query->whereHas('retroMap.game', function ($q) use ($subfilter) {
-                $q->where('game_id', $subfilter);
-            }),
+                    $q->where('game_id', $subfilter);
+                }),
             default => $query, // MAPLIST and MAPLIST_ALL_VERSIONS ignore subfilter
         };
     }
