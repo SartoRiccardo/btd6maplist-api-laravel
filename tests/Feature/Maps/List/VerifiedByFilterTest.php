@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Maps\List;
 
+use App\Models\Config;
 use App\Models\Map;
 use App\Models\MapListMeta;
 use App\Models\User;
@@ -16,11 +17,12 @@ class VerifiedByFilterTest extends TestCase
     #[Group('verified_by')]
     public function test_verified_by_filters_maps_by_verifier_discord_id(): void
     {
+        $currentVersion = Config::loadVars(['current_btd6_ver'])->get('current_btd6_ver');
         $users = User::factory()
             ->count(2)
             ->create();
 
-        $includedCount = 2;
+        $includedCount = 4;
         $maps = Map::factory()->count($includedCount + 3)->create();
 
         Verification::factory()
@@ -28,7 +30,13 @@ class VerifiedByFilterTest extends TestCase
             ->sequence(fn($seq) => [
                 'map_code' => $maps[$seq->index]->code,
                 'user_id' => $seq->index < $includedCount ? $users[0]->discord_id : $users[1]->discord_id,
+                // 'version' => $currentVersion - $seq->index,
             ])
+            ->sequence(
+                ['version' => $currentVersion],
+                ['version' => null],
+                ['version' => $currentVersion + 100],
+            )
             ->create();
 
         $metas = MapListMeta::factory()
@@ -44,6 +52,9 @@ class VerifiedByFilterTest extends TestCase
             ->json();
 
         $expected = MapTestHelper::expectedMapLists($maps->take($includedCount), $metas->take($includedCount));
+        $expected['data'][0]['is_verified'] = true;
+        $expected['data'][1]['is_verified'] = true;
+        $expected['data'][3]['is_verified'] = true;
 
         $this->assertEquals($expected, $actual);
     }

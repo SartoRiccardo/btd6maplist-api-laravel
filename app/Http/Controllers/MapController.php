@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Map\IndexMapRequest;
+use App\Models\Config;
 use App\Models\Map;
 use App\Models\MapListMeta;
+use App\Models\Verification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -97,22 +99,31 @@ class MapController
         $maps = Map::whereIn('code', $metaCodes->pluck('code'))
             ->get();
 
+        // Get all verified map codes (any version)
+        $verifiedMapCodes = Verification::getVerifiedMapCodes(
+            Config::loadVars(['current_btd6_ver'])->get('current_btd6_ver'),
+            $metaCodes->pluck('code')
+        )
+            ->flip()
+            ->map(fn() => true);
+
         // Merge meta and map data for each code in pagination order
         $metasByKey = $metaCodes->keyBy('code');
         $mapsByKey = $maps->keyBy('code');
         $data = $metaCodes->pluck('code')
-            ->map(function ($code) use ($metasByKey, $mapsByKey) {
+            ->map(function ($code) use ($metasByKey, $mapsByKey, $verifiedMapCodes) {
                 $meta = $metasByKey->get($code);
                 $map = $mapsByKey->get($code);
 
-                if (!$map) {
+                if (!$map || !$meta) {
                     return null;
                 }
 
-                return array_merge(
-                    $map->toArray() ?? [],
-                    $meta?->toArray() ?? []
-                );
+                return [
+                    ...$map->toArray(),
+                    ...$meta->toArray(),
+                    'is_verified' => $verifiedMapCodes->get($code, false),
+                ];
             })
             ->filter()
             ->values();

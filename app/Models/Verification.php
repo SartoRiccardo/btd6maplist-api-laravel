@@ -47,9 +47,12 @@ class Verification extends Model
      * @param iterable $mapCodes Collection of map codes to filter by
      * @return \Illuminate\Support\Collection Collection of verified map codes
      */
-    public static function getVerifiedMapCodes(int $version, iterable $mapCodes): \Illuminate\Support\Collection
+    public static function getVerifiedMapCodes(int $version, iterable $mapCodes)
     {
-        return self::where('version', $version)
+        return self::where(function ($q) use ($version) {
+            $q->where('version', $version)
+                ->orWhereNull('version');
+        })
             ->whereIn('map_code', $mapCodes)
             ->distinct()
             ->pluck('map_code');

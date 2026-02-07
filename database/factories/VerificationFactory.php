@@ -19,7 +19,7 @@ class VerificationFactory extends Factory
         return [
             'map_code' => Map::factory(),
             'user_id' => User::factory(),
-            'version' => 441, // Current BTD6 version (44.1 * 10)
+            'version' => 441,
         ];
     }
 }

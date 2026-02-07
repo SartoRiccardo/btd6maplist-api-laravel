@@ -25,7 +25,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *     @OA\Property(property="botb_difficulty", type="integer", nullable=true, description="Brown Border Bloat difficulty"),
  *     @OA\Property(property="remake_of", type="integer", nullable=true, description="ID of the retro map this is a remake of"),
  *     @OA\Property(property="deleted_on", type="string", format="date-time", nullable=true, description="Timestamp when the map was deleted"),
- *     @OA\Property(property="retro_map", ref="#/components/schemas/RetroMap", nullable=true, description="Retro map data (only included when format is Nostalgia Pack or remake_of is not null)")
+ *     @OA\Property(property="retro_map", ref="#/components/schemas/RetroMap", nullable=true, description="Retro map data (only included when format is Nostalgia Pack or remake_of is not null)"),
+ *     @OA\Property(property="is_verified", type="boolean", description="Whether the map has been verified")
  * )
  */
 class Map extends Model
@@ -126,6 +127,7 @@ class Map extends Model
             'remake_of' => null,
             'deleted_on' => null,
             'retro_map' => null,
+            'is_verified' => false,
         ];
     }
 
@@ -149,6 +151,7 @@ class Map extends Model
             'remake_of',
             'deleted_on',
             'retro_map',
+            'is_verified',
         ];
     }
 }
