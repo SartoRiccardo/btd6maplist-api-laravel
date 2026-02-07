@@ -43,19 +43,7 @@ class VerifiedByFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->take($includedCount)
-                ->zip($metas->take($includedCount))
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => 2,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps->take($includedCount), $metas->take($includedCount));
 
         $this->assertEquals($expected, $actual);
     }

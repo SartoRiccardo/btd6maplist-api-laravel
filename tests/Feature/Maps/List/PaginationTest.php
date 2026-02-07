@@ -29,18 +29,7 @@ class PaginationTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $count,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps, $metas);
 
         $this->assertEquals($expected, $actual);
     }
@@ -71,18 +60,12 @@ class PaginationTest extends TestCase
         $metasByKey = $metas->keyBy('code');
         $pageMetas = $pageMaps->map(fn($map) => $metasByKey->get($map->code))->values();
 
-        $expected = [
-            'data' => $pageMaps->zip($pageMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => $page,
-                'last_page' => (int) ceil($total / $perPage),
-                'per_page' => $perPage,
-                'total' => $total,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($pageMaps, $pageMetas, [
+            'current_page' => $page,
+            'last_page' => (int) ceil($total / $perPage),
+            'per_page' => $perPage,
+            'total' => $total,
+        ]);
 
         $this->assertEquals($expected, $actual);
     }

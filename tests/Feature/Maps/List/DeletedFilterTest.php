@@ -32,18 +32,7 @@ class DeletedFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $includedMaps->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => 3,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas);
 
         $this->assertEquals($expected, $actual);
     }

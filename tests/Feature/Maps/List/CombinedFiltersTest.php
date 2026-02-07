@@ -47,18 +47,7 @@ class CombinedFiltersTest extends TestCase
 
         $metas = $includedMetas->sortBy('difficulty')->values();
 
-        $expected = [
-            'data' => $includedMaps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedMaps->count(),
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $metas);
 
         $this->assertEquals($expected, $actual);
     }
@@ -98,18 +87,7 @@ class CombinedFiltersTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $includedMaps->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedMaps->count(),
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas);
 
         $this->assertEquals($expected, $actual);
     }
@@ -154,19 +132,7 @@ class CombinedFiltersTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-
-        $expected = [
-            'data' => $includedMaps->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedMaps->count(),
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas);
 
         $this->assertEquals($expected, $actual);
     }

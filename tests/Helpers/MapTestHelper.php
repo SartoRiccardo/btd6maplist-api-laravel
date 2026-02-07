@@ -3,6 +3,7 @@
 namespace Tests\Helpers;
 
 use App\Models\Map;
+use Illuminate\Database\Eloquent\Collection;
 
 class MapTestHelper
 {
@@ -21,5 +22,32 @@ class MapTestHelper
             ...$metaArray,
             ...$map->toArray(),
         ]);
+    }
+
+    /**
+     * Build expected response for paginated map list endpoint.
+     *
+     * @param Collection $maps Map collection
+     * @param Collection $metas MapListMeta collection (must be same count as maps)
+     * @param array $metaOverrides Optional pagination meta overrides (current_page, last_page, per_page)
+     * @return array Expected response structure with data and meta keys
+     */
+    public static function expectedMapLists(Collection $maps, Collection $metas, array $metaOverrides = []): array
+    {
+        $meta = [
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => 100,
+            'total' => $maps->count(),
+            ...$metaOverrides,
+        ];
+
+        return [
+            'data' => $maps->zip($metas)
+                ->map(fn($pair) => self::mergeMapMeta($pair[0], $pair[1]))
+                ->values()
+                ->toArray(),
+            'meta' => $meta,
+        ];
     }
 }

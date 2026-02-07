@@ -36,21 +36,7 @@ class FormatSubfilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $includedMetas = $metas->take($includedCount)->values();
-
-        $expected = [
-            'data' => $maps->take($includedCount)
-                ->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => 2,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps->take($includedCount), $metas->take($includedCount)->values());
 
         $this->assertEquals($expected, $actual);
     }
@@ -78,21 +64,7 @@ class FormatSubfilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $includedMetas = $metas->take($includedCount)->values();
-
-        $expected = [
-            'data' => $maps->take($includedCount)
-                ->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedCount,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps->take($includedCount), $metas->take($includedCount)->values());
 
         $this->assertEquals($expected, $actual);
     }
@@ -137,17 +109,7 @@ class FormatSubfilterTest extends TestCase
 
         $includedMetas->load('retroMap.game');
 
-        $expected = [
-            'data' => $includedMaps->zip($includedMetas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => 2,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas);
 
         $this->assertEquals($expected, $actual);
     }
@@ -171,18 +133,7 @@ class FormatSubfilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $count,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps, $metas);
 
         $this->assertEquals($expected, $actual);
     }
@@ -207,18 +158,7 @@ class FormatSubfilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $count,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps, $metas);
 
         $this->assertEquals($expected, $actual);
     }

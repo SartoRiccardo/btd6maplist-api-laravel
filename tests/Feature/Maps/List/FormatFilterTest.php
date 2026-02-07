@@ -34,19 +34,7 @@ class FormatFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->zip($metas)
-                ->take($mapCount)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $mapCount,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps->take($mapCount), $metas->take($mapCount));
 
         $this->assertEquals($expected, $actual);
     }
@@ -73,19 +61,7 @@ class FormatFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $expected = [
-            'data' => $maps->zip($metas)
-                ->take($mapCount)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $mapCount,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($maps->take($mapCount), $metas->take($mapCount));
 
         $this->assertEquals($expected, $actual);
     }
@@ -113,20 +89,7 @@ class FormatFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $metas = $includedMetas->sortBy('difficulty')->values();
-
-        $expected = [
-            'data' => $includedMaps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedCount,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas->sortBy('difficulty')->values());
 
         $this->assertEquals($expected, $actual);
     }
@@ -154,20 +117,7 @@ class FormatFilterTest extends TestCase
             ->assertStatus(200)
             ->json();
 
-        $metas = $includedMetas->sortBy('botb_difficulty')->values();
-
-        $expected = [
-            'data' => $includedMaps->zip($metas)
-                ->map(fn($pair) => MapTestHelper::mergeMapMeta($pair[0], $pair[1]))
-                ->values()
-                ->toArray(),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => 100,
-                'total' => $includedCount,
-            ],
-        ];
+        $expected = MapTestHelper::expectedMapLists($includedMaps, $includedMetas->sortBy('botb_difficulty')->values());
 
         $this->assertEquals($expected, $actual);
     }
