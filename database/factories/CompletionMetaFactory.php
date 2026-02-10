@@ -28,7 +28,7 @@ class CompletionMetaFactory extends Factory
             'lcc_id' => null,
             'created_on' => now(),
             'deleted_on' => null,
-            'accepted_by_id' => null,
+            'accepted_by_id' => User::factory(),
             'format_id' => fake()->randomElement([
                 FormatConstants::MAPLIST,
                 FormatConstants::MAPLIST_ALL_VERSIONS,
@@ -46,7 +46,7 @@ class CompletionMetaFactory extends Factory
     public function accepted(?int $acceptedBy = null): static
     {
         return $this->state(fn(array $attributes) => [
-            'accepted_by_id' => $acceptedBy ?? fake()->randomNumber(9, true),
+            'accepted_by_id' => $acceptedBy ?? User::factory()->create()->discord_id,
         ]);
     }
 

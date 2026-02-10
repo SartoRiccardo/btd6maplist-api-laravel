@@ -27,7 +27,6 @@ class CompletionMeta extends Model
         'completion',
         'format',
         'acceptedBy',
-        'players',
         'copied_from',
         'format_id',
         'copied_to',
@@ -56,8 +55,6 @@ class CompletionMeta extends Model
         'accepted_by_id' => 'string',
         'black_border' => 'boolean',
         'no_geraldo' => 'boolean',
-        'created_on' => 'timestamp',
-        'deleted_on' => 'timestamp',
     ];
 
     /**

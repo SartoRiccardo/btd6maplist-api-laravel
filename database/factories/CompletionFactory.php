@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Completion;
+use App\Models\CompletionMeta;
 use App\Models\Map;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -24,5 +26,17 @@ class CompletionFactory extends Factory
             'subm_wh_payload' => null,
             'copied_from_id' => null,
         ];
+    }
+
+    /**
+     * Indicate the completion has associated metadata.
+     */
+    public function withMeta(array $metaAttributes = []): static
+    {
+        return $this->afterCreating(function (Completion $completion) use ($metaAttributes) {
+            CompletionMeta::factory()
+                ->for($completion)
+                ->create($metaAttributes);
+        });
     }
 }
