@@ -151,6 +151,68 @@ class MapController
 
     public function save(Request $request)
     {
+        /*
+
+    Legacy Python code to update placements to scale them down. creates a new maplistmeta for every single
+    affected map in one fell swoop. Copy this implementation, hit the raw SQL directly.
+
+@postgres
+async def update_list_placements(
+        cur_positions: tuple[int | None, int | None] | None = None,
+        all_positions: tuple[int | None, int | None] | None = None,
+        ignore_code: str | None = None,
+        conn=None
+) -> None:
+    if cur_positions is not None and cur_positions[0] == cur_positions[1]:
+        cur_positions = None
+    if all_positions is not None and all_positions[0] == all_positions[1]:
+        all_positions = None
+    if cur_positions is all_positions is None:
+        return
+
+    selectors = []
+    args = []
+    base_idx = 2
+
+    curver_selector = "placement_curver"
+    if cur_positions:
+        selectors.append(f"placement_curver BETWEEN LEAST(${base_idx}::int, ${base_idx+1}::int) AND GREATEST(${base_idx}::int, ${base_idx+1}::int)")
+        curver_selector = f"""
+            CASE WHEN (placement_curver BETWEEN LEAST(${base_idx}::int, ${base_idx+1}::int) AND GREATEST(${base_idx}::int, ${base_idx+1}::int))
+            THEN placement_curver + SIGN(${base_idx}::int - ${base_idx+1}::int)
+            ELSE placement_curver END
+        """
+        args += [*normalize_positions(cur_positions)]
+        base_idx += 2
+
+    allver_selector = "placement_allver"
+    if all_positions:
+        selectors.append(f"placement_allver BETWEEN LEAST(${base_idx}::int, ${base_idx+1}::int) AND GREATEST(${base_idx}::int, ${base_idx+1}::int)")
+        allver_selector = f"""
+            CASE WHEN (placement_allver BETWEEN LEAST(${base_idx}::int, ${base_idx + 1}::int) AND GREATEST(${base_idx}::int, ${base_idx + 1}::int))
+            THEN placement_allver + SIGN(${base_idx}::int - ${base_idx + 1}::int)
+            ELSE placement_allver END
+        """
+        args += [*normalize_positions(all_positions)]
+        base_idx += 2
+
+    await conn.execute(
+        f"""
+        INSERT INTO map_list_meta
+            (placement_curver, placement_allver, code, difficulty, botb_difficulty, optimal_heros)
+        SELECT
+            {curver_selector},
+            {allver_selector},
+            code, difficulty, botb_difficulty, optimal_heros
+        FROM latest_maps_meta(NOW()::timestamp) mlm
+        WHERE mlm.deleted_on IS NULL
+            AND ({" OR ".join(selectors)})
+            AND mlm.code != $1
+        """,
+        ignore_code,
+        *args,
+    )
+         */
         return response()->json(['message' => 'Not Implemented'], 501);
     }
 
