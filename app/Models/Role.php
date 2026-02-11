@@ -26,9 +26,14 @@ class Role extends Model
         'internal' => 'boolean',
     ];
 
-    protected $appends = ['can_grant'];
+    protected $appends = [
+        'can_grant',
+    ];
 
-    protected $hidden = ['canGrant', 'assign_on_create', 'internal'];
+    protected $hidden = [
+        'canGrant',
+        'assign_on_create',
+    ];
 
     public function canGrant()
     {
