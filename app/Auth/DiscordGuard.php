@@ -33,12 +33,10 @@ class DiscordGuard implements Guard
 
     public function user(): ?User
     {
-        // If we already have a user (set via actingAs in tests), return it
         if ($this->user !== null) {
             return $this->user;
         }
 
-        // Try to get user from bearer token
         $token = $this->request->bearerToken();
 
         if (!$token) {
@@ -47,19 +45,14 @@ class DiscordGuard implements Guard
 
         try {
             $discordProfile = DiscordApiClient::getUserProfile($token);
-            $user = User::find($discordProfile['id']);
-
-            if (!$user) {
-                // Auto-create user
-                $user = User::create([
-                    'discord_id' => $discordProfile['id'],
+            return $this->user = User::firstOrCreate(
+                ['discord_id' => $discordProfile['id']],
+                [
                     'name' => $discordProfile['username'],
                     'has_seen_popup' => false,
                     'is_banned' => false,
-                ]);
-            }
-
-            return $this->user = $user;
+                ]
+            );
         } catch (\RuntimeException $e) {
             return null;
         }
@@ -72,7 +65,6 @@ class DiscordGuard implements Guard
 
     public function validate(array $credentials = []): bool
     {
-        // Not applicable for Discord token authentication
         return false;
     }
 

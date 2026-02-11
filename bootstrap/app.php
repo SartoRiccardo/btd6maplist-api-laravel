@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'discord.auth' => \App\Http\Middleware\DiscordAuth::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            '/web/oauth2/discord/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
