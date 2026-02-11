@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "name": "GET Formats",
+    "type": "http"
+  },
+  "http": {
+    "method": "GET",
+    "url": "{{BASE_URL}}/formats",
+    "auth": {
+      "type": "none"
+    },
+    "body": {
+      "mode": "none"
+    },
+    "params": [
+      {
+        "key": "page",
+        "value": "1",
+        "enabled": false
+      },
+      {
+        "key": "per_page",
+        "value": "100",
+        "enabled": false
+      }
+    ],
+    "headers": [
+      {
+        "name": "Accept",
+        "value": "application/json",
+        "enabled": true
+      }
+    ]
+  }
+}

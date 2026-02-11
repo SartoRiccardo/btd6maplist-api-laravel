@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Constants\FormatConstants;
-use App\Casts\MapSubmissionStatusCast;
-use App\Casts\RunSubmissionStatusCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -29,30 +26,16 @@ class Format extends Model
         'run_submission_status',
         'map_submission_status',
         'emoji',
+        'proposed_difficulties',
     ];
 
     public $incrementing = false;
 
-    protected $appends = [
-        'proposed_difficulties',
-    ];
-
     protected $casts = [
         'id' => 'integer',
         'hidden' => 'boolean',
-        'run_submission_status' => RunSubmissionStatusCast::class,
-        'map_submission_status' => MapSubmissionStatusCast::class,
+        'proposed_difficulties' => 'array',
     ];
-
-    public function getProposedDifficultiesAttribute(): ?array
-    {
-        return match ($this->id) {
-            FormatConstants::MAPLIST, FormatConstants::MAPLIST_ALL_VERSIONS => ["Top 3", "Top 10", "#11 ~ 20", "#21 ~ 30", "#31 ~ 40", "#41 ~ 50"],
-            FormatConstants::EXPERT_LIST => ["Casual Expert", "Casual/Medium Expert", "Medium Expert", "Medium/High Expert", "High Expert", "High/True Expert", "True Expert", "True/Extreme Expert", "Extreme Expert"],
-            FormatConstants::BEST_OF_THE_BEST => ["Beginner", "Intermediate", "Advanced", "Expert/Extreme"],
-            default => null,
-        };
-    }
 
     public function configFormats()
     {
@@ -79,6 +62,21 @@ class Format extends Model
             'map_submission_wh' => $this->map_submission_wh,
             'run_submission_wh' => $this->run_submission_wh,
             'emoji' => $this->emoji,
+        ];
+    }
+
+    /**
+     * Get the JSON structure for API responses.
+     */
+    public static function jsonStructure(array $data = []): array
+    {
+        return [
+            'id' => $data['id'] ?? null,
+            'name' => $data['name'] ?? null,
+            'hidden' => $data['hidden'] ?? false,
+            'run_submission_status' => $data['run_submission_status'] ?? 'closed',
+            'map_submission_status' => $data['map_submission_status'] ?? 'closed',
+            'proposed_difficulties' => $data['proposed_difficulties'] ?? null,
         ];
     }
 }

@@ -21,11 +21,16 @@ class FormatFactory extends Factory
             'id' => fake()->unique()->randomNumber(5, true),
             'name' => fake()->words(2, true),
             'hidden' => false,
-            'run_submission_status' => fake()->randomElement([0, 1, 2]),
-            'map_submission_status' => fake()->randomElement([0, 1, 2]),
+            'run_submission_status' => fake()->randomElement(['closed', 'open', 'lcc_only']),
+            'map_submission_status' => fake()->randomElement(['closed', 'open', 'open_chimps']),
             'map_submission_wh' => fake()->optional()->url(),
             'run_submission_wh' => fake()->optional()->url(),
             'emoji' => fake()->optional()->emoji(),
+            'proposed_difficulties' => fake()->optional(0.7)->randomElement([
+                ["Easy", "Medium", "Hard"],
+                ["Beginner", "Intermediate", "Advanced"],
+                ["Casual", "Regular", "Expert"],
+            ]),
         ];
     }
 
@@ -45,8 +50,8 @@ class FormatFactory extends Factory
     public function openSubmissions(): self
     {
         return $this->state(fn (array $attributes) => [
-            'run_submission_status' => 1, // open
-            'map_submission_status' => 1, // open
+            'run_submission_status' => 'open',
+            'map_submission_status' => 'open',
         ]);
     }
 }

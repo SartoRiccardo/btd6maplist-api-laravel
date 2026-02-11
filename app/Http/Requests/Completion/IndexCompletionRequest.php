@@ -8,6 +8,7 @@ use App\Http\Requests\BaseRequest;
  * @OA\Schema(
  *     schema="IndexCompletionRequest",
  *     @OA\Property(property="timestamp", type="integer", description="Unix timestamp to filter completions active at this time", example=1736123456),
+ *     @OA\Property(property="format_id", type="integer", description="Filter by format ID", example=1, minimum=1),
  *     @OA\Property(property="page", type="integer", description="Page number", example=1, minimum=1),
  *     @OA\Property(property="per_page", type="integer", description="Items per page", example=100, minimum=1, maximum=150),
  *     @OA\Property(property="player_id", type="integer", description="Filter by player's discord_id", example=2000000),
@@ -30,6 +31,7 @@ class IndexCompletionRequest extends BaseRequest
     {
         $this->merge([
             'timestamp' => $this->input('timestamp', time()),
+            'format_id' => $this->input('format_id'),
             'page' => $this->input('page', 1),
             'per_page' => $this->input('per_page', 100),
             'deleted' => $this->input('deleted', 'exclude'),
@@ -49,6 +51,7 @@ class IndexCompletionRequest extends BaseRequest
     {
         return [
             'timestamp' => ['nullable', 'integer', 'min:0'],
+            'format_id' => ['nullable', 'integer', 'min:1', 'exists:formats,id'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:150'],
             'player_id' => ['nullable', 'integer', 'min:1', 'exists:users,discord_id'],
@@ -76,6 +79,7 @@ class IndexCompletionRequest extends BaseRequest
             'black_border.in' => 'The black_border field must be one of: only, exclude, any.',
             'sort_by.in' => 'The sort_by field must be one of: created_on.',
             'sort_order.in' => 'The sort_order field must be one of: asc, desc.',
+            'format_id.exists' => 'The selected format does not exist.',
         ];
     }
 }

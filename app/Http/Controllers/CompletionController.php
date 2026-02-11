@@ -20,6 +20,7 @@ class CompletionController
      *     description="Retrieves a paginated list of completions with optional filters. Completions are queried based on their metadata (CompletionMeta) active at the specified timestamp.",
      *     tags={"Completions"},
      *     @OA\Parameter(name="timestamp", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/timestamp")),
+     *     @OA\Parameter(name="format_id", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/format_id")),
      *     @OA\Parameter(name="page", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/page")),
      *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/per_page")),
      *     @OA\Parameter(name="player_id", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/player_id")),
@@ -48,6 +49,7 @@ class CompletionController
 
         // Convert unix timestamp to Carbon instance for database queries
         $timestamp = Carbon::createFromTimestamp($validated['timestamp']);
+        $formatId = $validated['format_id'] ?? null;
         $page = $validated['page'];
         $perPage = $validated['per_page'];
         $deleted = $validated['deleted'] ?? 'exclude';
@@ -121,6 +123,11 @@ class CompletionController
             $metaQuery->whereHas('completion.map', function ($q) use ($mapCode) {
                 $q->where('code', $mapCode);
             });
+        }
+
+        // Apply format_id filter
+        if ($formatId) {
+            $metaQuery->where('format_id', $formatId);
         }
 
         $metaPaginated = $metaQuery->orderBy($sortBy, $sortOrder)
