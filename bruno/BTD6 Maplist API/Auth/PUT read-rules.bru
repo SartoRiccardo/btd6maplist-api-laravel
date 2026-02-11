@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "name": "PUT read-rules",
+    "type": "http"
+  },
+  "http": {
+    "method": "PUT",
+    "url": "{{BASE_URL}}/read-rules",
+    "auth": {
+      "type": "bearer",
+      "token": "{{USER_AUTH_TOKEN}}"
+    },
+    "body": {
+      "mode": "none"
+    },
+    "headers": [
+      {
+        "name": "Accept",
+        "value": "application/json",
+        "enabled": true
+      }
+    ]
+  }
+}
