@@ -17,12 +17,17 @@ class DevSeeder extends Seeder
         \DB::transaction(function () {
             $this->call([
                 \Database\Seeders\DatabaseSeeder::class,
+                // Users
                 \Database\Seeders\Dev\UserSeeder::class,
+                \Database\Seeders\Dev\UserRoleSeeder::class,
+                // Maps
                 \Database\Seeders\Dev\RetroSeeder::class,
                 \Database\Seeders\Dev\MapSeeder::class,
                 \Database\Seeders\Dev\CreatorSeeder::class,
                 \Database\Seeders\Dev\VerificationSeeder::class,
                 \Database\Seeders\Dev\AdditionalCodeSeeder::class,
+                // Completions
+                \Database\Seeders\Dev\CompletionSeeder::class,
             ]);
         });
     }
