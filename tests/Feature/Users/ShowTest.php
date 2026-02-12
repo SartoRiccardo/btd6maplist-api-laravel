@@ -106,13 +106,10 @@ class ShowTest extends TestCase
     {
         $user = User::factory()->create(["nk_oak" => "test_oak_123"]);
 
-        // Fake NK API to return an error response (500 internal server error)
+        // Fake NK API to return an error response (404 user not found)
         Http::fake([
-            "https://data.ninjakiwi.com/btd6/users/test_oak_123*" => [
-                "error" => "Internal Server Error",
-                "message" => "Failed to fetch user data",
-            ],
-        ])->throw();
+            "https://data.ninjakiwi.com/btd6/users/test_oak_123*" => Http::response(null, 400),
+        ]);
 
         $actual = $this->getJson("/api/users/{$user->discord_id}?include=flair")
             ->assertStatus(200)
