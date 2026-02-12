@@ -54,14 +54,7 @@ class MapController
         $formatId = $validated['format_id'] ?? null;
         $formatSubfilter = $validated['format_subfilter'] ?? null;
 
-
-        // Get latest metadata for timestamp CTE
-        $latsetMetaCte = MapListMeta::selectRaw('DISTINCT ON (code) *')
-            ->where('created_on', '<=', $timestamp)
-            ->orderBy('code')
-            ->orderBy('created_on', 'desc');
-
-        // Build query for MapListMeta to get active map codes
+        $latsetMetaCte = MapListMeta::activeAtTimestamp($timestamp);
         $metaQuery = MapListMeta::from(DB::raw("({$latsetMetaCte->toSql()}) as map_list_meta"))
             ->setBindings($latsetMetaCte->getBindings())
             ->with(['retroMap.game'])

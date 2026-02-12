@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Schema(
@@ -23,6 +24,16 @@ use Illuminate\Notifications\Notifiable;
  *         type="array",
  *         description="Platform (internal) roles assigned to the user",
  *         @OA\Items(ref="#/components/schemas/PlatformRole")
+ *     ),
+ *     @OA\Property(
+ *         property="medals",
+ *         type="object",
+ *         nullable=true,
+ *         description="Medal statistics (only included when 'medals' is in include parameter)",
+ *         @OA\Property(property="wins", type="integer", description="Number of map wins", example=42),
+ *         @OA\Property(property="black_border", type="integer", description="Number of black borders", example=15),
+ *         @OA\Property(property="no_geraldo", type="integer", description="Number of no geraldo runs", example=8),
+ *         @OA\Property(property="current_lcc", type="integer", description="Number of current LCCs", example=3)
  *     )
  * )
  */
@@ -138,6 +149,73 @@ class User extends Authenticatable
     public function verifications(): HasMany
     {
         return $this->hasMany(Verification::class, 'user_id');
+    }
+
+    /**
+     * Optimized query for player medal statistics. Ported over from the Python project.
+     * 
+     * @param int $timestamp
+     * @return array{black_border: int, current_lcc: int, no_geraldo: int, wins: int}
+     */
+    public function medals(int $timestamp): array
+    {
+        $activeCompletionsCte = CompletionMeta::activeAtTimestamp($timestamp);
+        $activeMapsCte = MapListMeta::activeAtTimestamp($timestamp);
+
+        $sql = "
+        WITH runs_with_flags AS (
+            SELECT
+                r.*,
+                (r.lcc = lccs.id AND lccs.id IS NOT NULL) AS current_lcc
+            FROM ({$activeCompletionsCte->toSql()}) r
+            LEFT JOIN lccs_by_map lccs
+                ON lccs.id = r.lcc
+            WHERE r.accepted_by IS NOT NULL
+                AND r.deleted_on IS NULL
+        ),
+        valid_maps AS MATERIALIZED (
+            SELECT *
+            FROM ({$activeMapsCte->toSql()})
+            WHERE deleted_on IS NULL
+        ),
+        medals_per_map AS (
+            SELECT
+                c.map,
+                BOOL_OR(rwf.black_border) AS black_border,
+                BOOL_OR(rwf.no_geraldo) AS no_geraldo,
+                BOOL_OR(rwf.current_lcc) AS current_lcc
+            FROM runs_with_flags rwf
+            JOIN completions c
+                ON c.id = rwf.completion
+            JOIN comp_players ply
+                ON ply.run = rwf.id
+            JOIN valid_maps m
+                ON c.map = m.code
+            WHERE ply.user_id = ?
+            GROUP BY c.map
+        )
+        SELECT
+            COUNT(*) AS wins,
+            COUNT(CASE WHEN black_border THEN 1 END) AS black_border,
+            COUNT(CASE WHEN no_geraldo THEN 1 END) AS no_geraldo,
+            COUNT(CASE WHEN current_lcc THEN 1 END) AS current_lcc
+        FROM medals_per_map
+        ";
+
+        $bindings = [
+            ...$activeCompletionsCte->getBindings(),
+            ...$activeMapsCte->getBindings(),
+            $this->discord_id,
+        ];
+
+        $result = DB::select($sql, $bindings);
+
+        return $result ? (array) $result[0] : [
+            'wins' => 0,
+            'black_border' => 0,
+            'no_geraldo' => 0,
+            'current_lcc' => 0,
+        ];
     }
 
     // --- TestableStructure --- //

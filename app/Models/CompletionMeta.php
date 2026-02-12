@@ -132,4 +132,17 @@ class CompletionMeta extends Model
         $lcc = $this->getRelationValue('lcc');
         return $lcc?->toArray();
     }
+
+    /**
+     * Partial raw query to get the active metas at a timestamp.
+     * 
+     * @param mixed $timestamp
+     */
+    public static function activeAtTimestamp($timestamp): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::selectRaw('DISTINCT ON (completion_id) *')
+            ->where('created_on', '<=', $timestamp)
+            ->orderBy('completion_id')
+            ->orderBy('created_on', 'desc');
+    }
 }

@@ -62,13 +62,8 @@ class CompletionController
         $sortBy = $validated['sort_by'] ?? 'created_on';
         $sortOrder = $validated['sort_order'] ?? 'asc';
 
-        // Get latest metadata for timestamp CTE
-        $latestMetaCte = CompletionMeta::selectRaw('DISTINCT ON (completion_id) *')
-            ->where('created_on', '<=', $timestamp)
-            ->orderBy('completion_id')
-            ->orderBy('created_on', 'desc');
-
         // Build query for CompletionMeta to get active completion IDs
+        $latestMetaCte = CompletionMeta::activeAtTimestamp($timestamp);
         $metaQuery = CompletionMeta::from(DB::raw("({$latestMetaCte->toSql()}) as completions_meta"))
             ->setBindings($latestMetaCte->getBindings())
             ->with(['completion.map', 'completion.proofs', 'lcc', 'players']);

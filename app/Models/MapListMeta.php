@@ -110,4 +110,17 @@ class MapListMeta extends Model
             default => $query, // MAPLIST and MAPLIST_ALL_VERSIONS ignore subfilter
         };
     }
+
+    /**
+     * Partial raw query to get the active metas at a timestamp.
+     * 
+     * @param mixed $timestamp
+     */
+    public static function activeAtTimestamp($timestamp): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::selectRaw('DISTINCT ON (code) *')
+            ->where('created_on', '<=', $timestamp)
+            ->orderBy('code')
+            ->orderBy('created_on', 'desc');
+    }
 }
