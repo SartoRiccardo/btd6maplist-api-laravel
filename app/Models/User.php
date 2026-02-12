@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -27,7 +28,7 @@ use Illuminate\Notifications\Notifiable;
  */
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, TestableStructure;
 
     public $timestamps = false;
     protected $primaryKey = 'discord_id';
@@ -137,5 +138,35 @@ class User extends Authenticatable
     public function verifications(): HasMany
     {
         return $this->hasMany(Verification::class, 'user_id');
+    }
+
+    // --- TestableStructure --- //
+
+    /**
+     * Get the default values for the User JSON structure.
+     */
+    protected static function defaults(array $overrides = []): array
+    {
+        return [
+            'discord_id' => isset($overrides['discord_id']) ? (string) $overrides['discord_id'] : '123456789012345678',
+            'name' => 'TestUser',
+            'is_banned' => false,
+            'roles' => [],
+        ];
+    }
+
+    /**
+     * Get the fields that are allowed when strict mode is enabled.
+     */
+    protected static function strictFields(): array
+    {
+        return [
+            'discord_id',
+            'name',
+            'is_banned',
+            'avatar_url',
+            'banner_url',
+            'roles',
+        ];
     }
 }

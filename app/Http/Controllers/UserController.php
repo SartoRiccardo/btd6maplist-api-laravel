@@ -44,7 +44,10 @@ class UserController
         $includes = array_filter(explode(',', $request->query('include', '')));
         $includeFlair = in_array('flair', $includes, true);
 
-        $user = User::with('roles')->findOrFail($id);
+        $user = User::with('roles')->find($id);
+        if (!$user) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
         $response = $user->toArray();
 
         // Only fetch and include NK data if 'flair' is in includes

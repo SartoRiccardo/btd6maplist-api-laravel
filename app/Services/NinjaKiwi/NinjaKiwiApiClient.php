@@ -21,7 +21,7 @@ class NinjaKiwiApiClient
         $response = \Http::get("https://data.ninjakiwi.com/btd6/users/{$oak}");
 
         if ($response->failed() || !$response->json('success')) {
-            return ['avatarURL' => null, 'bannerURL' => null];
+            return ['avatar_url' => null, 'banner_url' => null];
         }
 
         $body = $response->json('body', []);
