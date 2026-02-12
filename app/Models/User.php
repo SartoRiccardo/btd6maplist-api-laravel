@@ -153,11 +153,11 @@ class User extends Authenticatable
 
     /**
      * Optimized query for player medal statistics. Ported over from the Python project.
-     * 
-     * @param int $timestamp
+     *
+     * @param \Carbon\Carbon $timestamp
      * @return array{black_border: int, current_lcc: int, no_geraldo: int, wins: int}
      */
-    public function medals(int $timestamp): array
+    public function medals(\Carbon\Carbon $timestamp): array
     {
         $activeCompletionsCte = CompletionMeta::activeAtTimestamp($timestamp);
         $activeMapsCte = MapListMeta::activeAtTimestamp($timestamp);
@@ -166,11 +166,11 @@ class User extends Authenticatable
         WITH runs_with_flags AS (
             SELECT
                 r.*,
-                (r.lcc = lccs.id AND lccs.id IS NOT NULL) AS current_lcc
+                (r.lcc_id = lccs.id AND lccs.id IS NOT NULL) AS current_lcc
             FROM ({$activeCompletionsCte->toSql()}) r
             LEFT JOIN lccs_by_map lccs
-                ON lccs.id = r.lcc
-            WHERE r.accepted_by IS NOT NULL
+                ON lccs.id = r.lcc_id
+            WHERE r.accepted_by_id IS NOT NULL
                 AND r.deleted_on IS NULL
         ),
         valid_maps AS MATERIALIZED (
@@ -180,19 +180,19 @@ class User extends Authenticatable
         ),
         medals_per_map AS (
             SELECT
-                c.map,
+                c.map_code,
                 BOOL_OR(rwf.black_border) AS black_border,
                 BOOL_OR(rwf.no_geraldo) AS no_geraldo,
                 BOOL_OR(rwf.current_lcc) AS current_lcc
             FROM runs_with_flags rwf
             JOIN completions c
-                ON c.id = rwf.completion
+                ON c.id = rwf.completion_id
             JOIN comp_players ply
                 ON ply.run = rwf.id
             JOIN valid_maps m
-                ON c.map = m.code
+                ON c.map_code = m.code
             WHERE ply.user_id = ?
-            GROUP BY c.map
+            GROUP BY c.map_code
         )
         SELECT
             COUNT(*) AS wins,
@@ -245,6 +245,7 @@ class User extends Authenticatable
             'avatar_url',
             'banner_url',
             'roles',
+            'medals',
         ];
     }
 }

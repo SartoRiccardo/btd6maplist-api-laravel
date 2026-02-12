@@ -79,7 +79,8 @@ class UserController
 
         // Include medal statistics if 'medals' is in includes
         if ($includeMedals) {
-            $response['medals'] = $user->medals($timestamp);
+            $carbonTimestamp = Carbon::createFromTimestamp($timestamp);
+            $response['medals'] = $user->medals($carbonTimestamp);
         }
 
         return response()->json($response);

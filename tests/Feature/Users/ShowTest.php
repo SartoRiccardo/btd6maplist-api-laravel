@@ -119,4 +119,27 @@ class ShowTest extends TestCase
         $this->assertNull($actual["avatar_url"]);
         $this->assertNull($actual["banner_url"]);
     }
+
+    #[Group("get")]
+    #[Group("users")]
+    public function test_include_medals_for_empty_user_returns_all_zeros(): void
+    {
+        $user = User::factory()->create();
+
+        $actual = $this->getJson("/api/users/{$user->discord_id}?include=medals")
+            ->assertStatus(200)
+            ->json();
+
+        $expected = User::jsonStructure([
+            ...$user->toArray(),
+            'medals' => [
+                'wins' => 0,
+                'black_border' => 0,
+                'no_geraldo' => 0,
+                'current_lcc' => 0,
+            ],
+        ]);
+
+        $this->assertEquals($expected, $actual);
+    }
 }
