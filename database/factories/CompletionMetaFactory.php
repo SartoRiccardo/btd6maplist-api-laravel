@@ -51,6 +51,16 @@ class CompletionMetaFactory extends Factory
     }
 
     /**
+     * Indicate the completion is pending.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'accepted_by_id' => null,
+        ]);
+    }
+
+    /**
      * Indicate the completion is soft deleted.
      */
     public function deleted(): static
