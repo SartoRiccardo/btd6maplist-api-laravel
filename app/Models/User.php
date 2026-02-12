@@ -8,6 +8,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @OA\Schema(
+ *     schema="User",
+ *     type="object",
+ *     @OA\Property(property="discord_id", type="string", description="User's Discord ID", example="123456789012345678"),
+ *     @OA\Property(property="name", type="string", description="User's name", example="JohnDoe123"),
+ *     @OA\Property(property="is_banned", type="boolean", description="Whether the user is banned"),
+ *     @OA\Property(property="avatar_url", type="string", nullable=true, description="Avatar URL from Ninja Kiwi API (only included when 'flair' is in include parameter)"),
+ *     @OA\Property(property="banner_url", type="string", nullable=true, description="Banner URL from Ninja Kiwi API (only included when 'flair' is in include parameter)"),
+ *     @OA\Property(
+ *         property="platform_roles",
+ *         type="array",
+ *         description="Platform (internal) roles assigned to the user",
+ *         @OA\Items(ref="#/components/schemas/PlatformRole")
+ *     )
+ * )
+ */
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;

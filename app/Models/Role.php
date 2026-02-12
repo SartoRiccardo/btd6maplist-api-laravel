@@ -6,6 +6,16 @@ use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @OA\Schema(
+ *     schema="PlatformRole",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", description="Role ID", example=1),
+ *     @OA\Property(property="name", type="string", description="Role name", example="Moderator"),
+ *     @OA\Property(property="internal", type="boolean", description="Whether the role is internal", example=false),
+ *     @OA\Property(property="can_grant", type="array", description="Role IDs that this role can grant", @OA\Items(type="integer"))
+ * )
+ */
 class Role extends Model
 {
     use HasFactory, TestableStructure;
@@ -33,6 +43,7 @@ class Role extends Model
 
     protected $hidden = [
         'canGrant',
+        'pivot',
         'assign_on_create',
     ];
 

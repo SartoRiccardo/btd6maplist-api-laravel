@@ -27,8 +27,8 @@ class NinjaKiwiApiClient
         $body = $response->json('body', []);
 
         return [
-            'avatarURL' => $body['avatarURL'] ?? null,
-            'bannerURL' => $body['bannerURL'] ?? null,
+            'avatar_url' => $body['avatarURL'] ?? null,
+            'banner_url' => $body['bannerURL'] ?? null,
         ];
     }
 
