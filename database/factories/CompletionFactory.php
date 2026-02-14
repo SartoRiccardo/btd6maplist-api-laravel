@@ -20,7 +20,7 @@ class CompletionFactory extends Factory
     public function definition(): array
     {
         return [
-            'map_code' => fn() => Map::factory()->withMeta()->create()->code,
+            'map_code' => fn() => Map::factory()->withMeta(),
             'submitted_on' => now(),
             'subm_notes' => null,
             'subm_wh_payload' => null,

@@ -23,4 +23,9 @@ class LccFilterTest extends ThreeStateFilterTestBase
     {
         return CompletionMeta::factory()->state(['lcc_id' => null]);
     }
+
+    protected function includedHasCurrentLcc(): bool
+    {
+        return true;
+    }
 }

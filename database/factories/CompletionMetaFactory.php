@@ -6,6 +6,7 @@ use App\Constants\FormatConstants;
 use App\Models\CompPlayer;
 use App\Models\CompletionMeta;
 use App\Models\Completion;
+use App\Models\LeastCostChimps;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -67,6 +68,28 @@ class CompletionMetaFactory extends Factory
     {
         return $this->state(fn(array $attributes) => [
             'deleted_on' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate the completion has LCC.
+     */
+    public function lcc(?int $leftover = 999_999): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'lcc_id' => LeastCostChimps::factory()->create(['leftover' => $leftover])->id,
+        ]);
+    }
+
+    /**
+     * Indicate the completion is soft deleted.
+     */
+    public function standard(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'no_geraldo' => false,
+            'black_border' => false,
+            'lcc_id' => null,
         ]);
     }
 

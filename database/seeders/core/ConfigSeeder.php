@@ -7,6 +7,7 @@ use App\Models\Config;
 use App\Models\ConfigFormat;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ConfigSeeder extends Seeder
 {
@@ -63,5 +64,7 @@ class ConfigSeeder extends Seeder
                 );
             }
         }
+
+        DB::statement("REFRESH MATERIALIZED VIEW listmap_points");
     }
 }

@@ -137,6 +137,7 @@ class Completion extends Model
             'accepted_by',
             'lcc',
             'players',
+            'is_current_lcc',
         ];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Completion\IndexCompletionRequest;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
+use App\Models\MapListMeta;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class CompletionController
      *     @OA\Parameter(name="black_border", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/black_border")),
      *     @OA\Parameter(name="sort_by", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/sort_by")),
      *     @OA\Parameter(name="sort_order", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/sort_order")),
+     *     @OA\Parameter(name="include", in="query", required=false, @OA\Schema(ref="#/components/schemas/IndexCompletionRequest/properties/include")),
      *     @OA\Response(
      *         response=200,
      *         description="Successful response",
@@ -61,6 +63,7 @@ class CompletionController
         $mapCode = $validated['map_code'] ?? null;
         $sortBy = $validated['sort_by'] ?? 'created_on';
         $sortOrder = $validated['sort_order'] ?? 'asc';
+        $include = $validated['include'] ?? [];
 
         // Build query for CompletionMeta to get active completion IDs
         $latestMetaCte = CompletionMeta::activeAtTimestamp($timestamp);
@@ -128,18 +131,47 @@ class CompletionController
         $metaPaginated = $metaQuery->orderBy($sortBy, $sortOrder)
             ->paginate($perPage, ['*'], 'page', $page);
 
+        // Load map metadata if requested
+        $mapMetadataByKey = collect();
+        if (in_array('map.metadata', $include)) {
+            $latestMetaCte = MapListMeta::activeAtTimestamp($timestamp);
+            $mapCodes = $metaPaginated->pluck('completion.map.code')->unique()->filter();
+
+            $mapMetadataByKey = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
+                ->setBindings($latestMetaCte->getBindings())
+                ->with(['retroMap.game'])
+                ->whereIn('code', $mapCodes)
+                ->get()
+                ->keyBy('code');
+        }
+
+        // Load current LCC IDs for these completions
+        $lccIds = $metaPaginated->pluck('lcc_id')->unique()->filter()->values();
+        $currentLccIds = collect();
+        if ($lccIds->isNotEmpty()) {
+            $currentLccIds = DB::table('lccs_by_map')
+                ->whereIn('id', $lccIds)
+                ->pluck('id');
+        }
+
         // Build data array from paginated metas
-        $data = $metaPaginated->map(function ($meta) {
+        $data = $metaPaginated->map(function ($meta) use ($mapMetadataByKey, $currentLccIds) {
             $completion = $meta->completion;
             if (!$completion) {
                 return null;
             }
 
-            // Merge meta first, then completion (so completion.id overrides meta.id)
-            return [
+            $result = [
                 ...$meta->toArray(),
                 ...$completion->toArray(),
+                'map' => [
+                    ...($mapMetadataByKey->get($completion->map->code) ?? collect())->toArray(),
+                    ...$completion->map->toArray(),
+                ],
+                'is_current_lcc' => $meta->lcc_id ? $currentLccIds->contains($meta->lcc_id) : false,
             ];
+
+            return $result;
         })
             ->filter()
             ->values();

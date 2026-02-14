@@ -19,7 +19,8 @@ use App\Http\Requests\BaseRequest;
  *     @OA\Property(property="lcc", type="string", enum={"only", "exclude", "any"}, description="Filter by LCC presence", example="any"),
  *     @OA\Property(property="black_border", type="string", enum={"only", "exclude", "any"}, description="Filter by black_border status", example="any"),
  *     @OA\Property(property="sort_by", type="string", enum={"created_on"}, description="Field to sort by", example="created_on"),
- *     @OA\Property(property="sort_order", type="string", enum={"asc", "desc"}, description="Sort order", example="asc")
+ *     @OA\Property(property="sort_order", type="string", enum={"asc", "desc"}, description="Sort order", example="asc"),
+ *     @OA\Property(property="include", type="string", description="Include additional resources (comma-separated)", example="map.metadata")
  * )
  */
 class IndexCompletionRequest extends BaseRequest
@@ -29,6 +30,11 @@ class IndexCompletionRequest extends BaseRequest
      */
     protected function prepareForValidation(): void
     {
+        $include = $this->input('include');
+        if (is_string($include)) {
+            $include = array_filter(array_map('trim', explode(',', $include)));
+        }
+
         $this->merge([
             'timestamp' => $this->input('timestamp', time()),
             'format_id' => $this->input('format_id'),
@@ -41,6 +47,7 @@ class IndexCompletionRequest extends BaseRequest
             'black_border' => $this->input('black_border', 'any'),
             'sort_by' => $this->input('sort_by', 'created_on'),
             'sort_order' => $this->input('sort_order', 'asc'),
+            'include' => $include ?? [],
         ]);
     }
 
@@ -63,6 +70,8 @@ class IndexCompletionRequest extends BaseRequest
             'black_border' => ['nullable', 'in:only,exclude,any'],
             'sort_by' => ['nullable', 'in:created_on'],
             'sort_order' => ['nullable', 'in:asc,desc'],
+            'include' => ['nullable', 'array'],
+            'include.*' => ['string', 'in:map.metadata'],
         ];
     }
 

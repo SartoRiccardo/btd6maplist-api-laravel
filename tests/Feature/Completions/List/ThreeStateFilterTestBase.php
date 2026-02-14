@@ -18,6 +18,15 @@ abstract class ThreeStateFilterTestBase extends TestCase
 
     abstract protected function createExcludedMetaFactory(): CompletionMetaFactory;
 
+    /**
+     * Whether metas from createIncludedMetaFactory should have is_current_lcc=true.
+     * Override in subclasses that use LCCs.
+     */
+    protected function includedHasCurrentLcc(): bool
+    {
+        return false;
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -76,7 +85,8 @@ abstract class ThreeStateFilterTestBase extends TestCase
         Completion::factory()->count(2)->withMeta($excludedAttrs)->create();
 
         $includedMetas->each(fn($meta) => $meta->load(['players', 'completion.map']));
-        $expected = CompletionTestHelper::expectedCompletionLists($includedCompletions, $includedMetas);
+        $overrides = $this->includedHasCurrentLcc() ? ['is_current_lcc' => true] : [];
+        $expected = CompletionTestHelper::expectedCompletionListsWithOverrides($includedCompletions, $includedMetas, $overrides);
 
         $actual = $this->getJson("/api/completions?{$filterName}=only")
             ->assertStatus(200)
@@ -158,8 +168,15 @@ abstract class ThreeStateFilterTestBase extends TestCase
 
         $completionsByKey = $allCompletions->keyBy('id');
 
+        $includedOverrides = $this->includedHasCurrentLcc() ? ['is_current_lcc' => true] : [];
+        $excludedOverrides = [];
+
         $data = $allMetas
-            ->map(fn($meta) => CompletionTestHelper::mergeCompletionMeta($completionsByKey->get($meta->completion_id), $meta))
+            ->map(fn($meta) => CompletionTestHelper::mergeCompletionMeta(
+                $completionsByKey->get($meta->completion_id),
+                $meta,
+                in_array($meta, $metas1->all()) ? $includedOverrides : $excludedOverrides
+            ))
             ->values()
             ->toArray();
 

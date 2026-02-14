@@ -141,7 +141,7 @@ class CombinedFiltersTest extends TestCase
         }
 
         $includedMetas->each(fn($meta) => $meta->load(['players', 'completion.map']));
-        $expected = CompletionTestHelper::expectedCompletionLists($includedCompletions, $includedMetas);
+        $expected = CompletionTestHelper::expectedCompletionListsWithOverrides($includedCompletions, $includedMetas, ['is_current_lcc' => true]);
 
         $actual = $this->getJson('/api/completions?lcc=only&black_border=only')
             ->assertStatus(200)
@@ -207,7 +207,7 @@ class CombinedFiltersTest extends TestCase
         }
 
         $includedMetas->each(fn($meta) => $meta->load(['players', 'completion.map']));
-        $expected = CompletionTestHelper::expectedCompletionLists($includedCompletions, $includedMetas);
+        $expected = CompletionTestHelper::expectedCompletionListsWithOverrides($includedCompletions, $includedMetas, ['is_current_lcc' => true]);
 
         $actual = $this->getJson('/api/completions?lcc=only&pending=only')
             ->assertStatus(200)
