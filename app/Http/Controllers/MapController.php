@@ -6,7 +6,6 @@ use App\Constants\FormatConstants;
 use App\Http\Requests\Map\IndexMapRequest;
 use App\Http\Requests\Map\StoreMapRequest;
 use App\Http\Requests\Map\UpdateMapRequest;
-use App\Http\Requests\Map\DeleteMapRequest;
 use App\Models\Config;
 use App\Models\Creator;
 use App\Models\Map;
@@ -329,24 +328,23 @@ class MapController
             ]);
 
             // Handle reranking if placements were set
-            $hasMaplistPermission = in_array(FormatConstants::MAPLIST, $userFormatIds);
-            $hasMaplistAllPermission = in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
+            $hasGlobalPermission = in_array(null, $userFormatIds, true);
+            $hasMaplistPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST, $userFormatIds);
+            $hasMaplistAllPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
 
             $curPositionFrom = null;
             $curPositionTo = $hasMaplistPermission ? ($metaFields['placement_curver'] ?? null) : null;
             $allPositionFrom = null;
             $allPositionTo = $hasMaplistAllPermission ? ($metaFields['placement_allver'] ?? null) : null;
 
-            if ($curPositionTo !== null || $allPositionTo !== null) {
-                $mapService->rerankPlacements(
-                    $curPositionFrom,
-                    $curPositionTo,
-                    $allPositionFrom,
-                    $allPositionTo,
-                    $map->code,
-                    $now
-                );
-            }
+            $mapService->rerankPlacements(
+                $curPositionFrom,
+                $curPositionTo,
+                $allPositionFrom,
+                $allPositionTo,
+                $map->code,
+                $now
+            );
 
             // Handle remake_of cleanup
             if (isset($metaFields['remake_of']) && $metaFields['remake_of'] !== null) {
@@ -594,24 +592,23 @@ class MapController
 
             if ($metaFieldsChanged || $optimalHeroesChanged) {
                 // Handle reranking if placements changed
-                $hasMaplistPermission = in_array(FormatConstants::MAPLIST, $userFormatIds);
-                $hasMaplistAllPermission = in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
+                $hasGlobalPermission = in_array(null, $userFormatIds, true);
+                $hasMaplistPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST, $userFormatIds);
+                $hasMaplistAllPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
 
                 $curPositionFrom = $hasMaplistPermission ? $existingMeta->placement_curver : null;
                 $curPositionTo = $hasMaplistPermission ? ($metaFields['placement_curver'] ?? $existingMeta->placement_curver) : null;
                 $allPositionFrom = $hasMaplistAllPermission ? $existingMeta->placement_allver : null;
                 $allPositionTo = $hasMaplistAllPermission ? ($metaFields['placement_allver'] ?? $existingMeta->placement_allver) : null;
 
-                if ($curPositionFrom !== $curPositionTo || $allPositionFrom !== $allPositionTo) {
-                    $mapService->rerankPlacements(
-                        $curPositionFrom,
-                        $curPositionTo,
-                        $allPositionFrom,
-                        $allPositionTo,
-                        $map->code,
-                        $now
-                    );
-                }
+                $mapService->rerankPlacements(
+                    $curPositionFrom,
+                    $curPositionTo,
+                    $allPositionFrom,
+                    $allPositionTo,
+                    $map->code,
+                    $now
+                );
 
                 // Handle remake_of cleanup if changed
                 $oldRemakeOf = $existingMeta->remake_of;
@@ -701,31 +698,27 @@ class MapController
             return response()->json(['message' => 'Forbidden - You do not have permission to delete maps'], 403);
         }
 
-        // Find the map
-        $map = Map::find($id);
-        if (!$map) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
-
         // Get current active MapListMeta
         $latestMetaCte = MapListMeta::activeAtTimestamp($now);
         $existingMeta = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
             ->setBindings($latestMetaCte->getBindings())
-            ->where('code', $map->code)
+            ->where('code', $id)
             ->first();
 
         if (!$existingMeta) {
             return response()->json(['message' => 'Not Found'], 404);
         }
 
-        return DB::transaction(function () use ($map, $existingMeta, $userFormatIds, $mapService, $now) {
+        return DB::transaction(function () use ($id, $existingMeta, $userFormatIds, $mapService, $now) {
             // Build new meta data based on user's permissions
             // All permission-based fields are set to NULL
-            $hasMaplistPermission = in_array(FormatConstants::MAPLIST, $userFormatIds);
-            $hasMaplistAllPermission = in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
-            $hasExpertListPermission = in_array(FormatConstants::EXPERT_LIST, $userFormatIds);
-            $hasBotbPermission = in_array(FormatConstants::BEST_OF_THE_BEST, $userFormatIds);
-            $hasNostalgiaPermission = in_array(FormatConstants::NOSTALGIA_PACK, $userFormatIds);
+            // null in userFormatIds grants admin privileges (all permissions)
+            $hasGlobalPermission = in_array(null, $userFormatIds, true);
+            $hasMaplistPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST, $userFormatIds);
+            $hasMaplistAllPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
+            $hasExpertListPermission = $hasGlobalPermission || in_array(FormatConstants::EXPERT_LIST, $userFormatIds);
+            $hasBotbPermission = $hasGlobalPermission || in_array(FormatConstants::BEST_OF_THE_BEST, $userFormatIds);
+            $hasNostalgiaPermission = $hasGlobalPermission || in_array(FormatConstants::NOSTALGIA_PACK, $userFormatIds);
 
             $newPlacementCurver = $hasMaplistPermission ? null : $existingMeta->placement_curver;
             $newPlacementAllver = $hasMaplistAllPermission ? null : $existingMeta->placement_allver;
@@ -747,29 +740,25 @@ class MapController
 
             // Handle reranking if placements are being cleared
             $curPositionFrom = $hasMaplistPermission ? $existingMeta->placement_curver : null;
-            $curPositionTo = null;
             $allPositionFrom = $hasMaplistAllPermission ? $existingMeta->placement_allver : null;
-            $allPositionTo = null;
 
-            if ($curPositionFrom !== null || $allPositionFrom !== null) {
-                $mapService->rerankPlacements(
-                    $curPositionFrom,
-                    $curPositionTo,
-                    $allPositionFrom,
-                    $allPositionTo,
-                    $map->code,
-                    $now
-                );
-            }
+            $mapService->rerankPlacements(
+                $curPositionFrom,
+                null,
+                $allPositionFrom,
+                null,
+                $id,
+                $now
+            );
 
             // Handle remake_of cleanup if being cleared
             if ($hasNostalgiaPermission && $existingMeta->remake_of !== null) {
-                $mapService->clearPreviousRemakeOf($existingMeta->remake_of, $map->code, $now);
+                $mapService->clearPreviousRemakeOf($existingMeta->remake_of, $id, $now);
             }
 
             // Create new MapListMeta
             MapListMeta::create([
-                'code' => $map->code,
+                'code' => $id,
                 'placement_curver' => $newPlacementCurver,
                 'placement_allver' => $newPlacementAllver,
                 'difficulty' => $newDifficulty,
