@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Verification extends Model
 {
-    use HasFactory;
+    use HasFactory, TestableStructure;
 
     public $timestamps = false;
     public $incrementing = false;
@@ -56,5 +57,35 @@ class Verification extends Model
             ->whereIn('map_code', $mapCodes)
             ->distinct()
             ->pluck('map_code');
+    }
+
+    // --- TestableStructure --- //
+
+    /**
+     * Get the default values for the Verification JSON structure.
+     */
+    protected static function defaults(array $overrides = []): array
+    {
+        return [
+            'map_code' => $overrides['map_code'] ?? 'TESTCODE',
+            'user_id' => $overrides['user_id'] ?? '123456789012345678',
+            'version' => $overrides['version'] ?? null,
+            'user' => [],
+        ];
+    }
+
+    /**
+     * Get the fields that are allowed when strict mode is enabled.
+     */
+    protected static function strictFields(): array
+    {
+        return [
+            'map_code',
+            'user_id',
+            'version',
+            'user',
+            'avatar_url',
+            'banner_url',
+        ];
     }
 }
