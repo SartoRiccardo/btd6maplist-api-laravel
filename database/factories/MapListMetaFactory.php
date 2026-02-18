@@ -60,4 +60,15 @@ class MapListMetaFactory extends Factory
             'deleted_on' => null,
         ];
     }
+
+    public function empty(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'placement_curver' => null,
+            'placement_allver' => null,
+            'difficulty' => null,
+            'botb_difficulty' => null,
+            'remake_of' => null,
+        ]);
+    }
 }

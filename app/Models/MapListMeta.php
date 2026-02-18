@@ -121,6 +121,7 @@ class MapListMeta extends Model
         return self::selectRaw('DISTINCT ON (code) *')
             ->where('created_on', '<=', $timestamp)
             ->orderBy('code')
-            ->orderBy('created_on', 'desc');
+            ->orderBy('created_on', 'desc')
+            ->orderBy('id', 'desc');
     }
 }

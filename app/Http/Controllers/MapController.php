@@ -742,6 +742,18 @@ class MapController
             $curPositionFrom = $hasMaplistPermission ? $existingMeta->placement_curver : null;
             $allPositionFrom = $hasMaplistAllPermission ? $existingMeta->placement_allver : null;
 
+            // Check if anything has actually changed
+            if (
+                !($existingMeta->placement_curver !== $newPlacementCurver
+                    || $existingMeta->placement_allver !== $newPlacementAllver
+                    || $existingMeta->difficulty !== $newDifficulty
+                    || $existingMeta->botb_difficulty !== $newBotbDifficulty
+                    || $existingMeta->remake_of !== $newRemakeOf
+                    || $existingMeta->deleted_on !== $newDeletedOn)
+            ) {
+                return response()->noContent();
+            }
+
             $mapService->rerankPlacements(
                 $curPositionFrom,
                 null,

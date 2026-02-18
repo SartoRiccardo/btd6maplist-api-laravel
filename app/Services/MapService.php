@@ -31,88 +31,78 @@ class MapService
         string $ignoreCode,
         Carbon $now
     ): void {
-        // Normalize positions - if from and to are the same, no reranking needed
-        if ($curPositionFrom === $curPositionTo) {
-            $curPositionFrom = null;
-            $curPositionTo = null;
-        }
-        if ($allPositionFrom === $allPositionTo) {
-            $allPositionFrom = null;
-            $allPositionTo = null;
-        }
+        $bigNumber = 1_000_000;
 
-        // If both cur and all positions are null, nothing to do
-        if (
-            $curPositionFrom === null && $curPositionTo === null
-            && $allPositionFrom === null && $allPositionTo === null
-        ) {
+        $curChanged = $curPositionFrom !== $curPositionTo;
+        $allChanged = $allPositionFrom !== $allPositionTo;
+
+        if (!$curChanged && !$allChanged) {
             return;
         }
 
-        $bindings = [];
-        $selectors = [];
-        $baseIdx = 1;
+        $whereClauses = [];
         $curverSelector = 'placement_curver';
         $allverSelector = 'placement_allver';
+        $selectBindings = [];
+        $whereBindings = [];
 
-        // Build current version selector
-        if ($curPositionFrom !== null && $curPositionTo !== null) {
-            $bindings[] = $curPositionFrom;
-            $bindings[] = $curPositionTo;
-            $baseIdx += 2;
+        if ($curChanged) {
+            $from = $curPositionFrom ?? $bigNumber;
+            $to = $curPositionTo ?? $bigNumber;
 
-            $curverSelector = "
-                CASE WHEN (placement_curver BETWEEN LEAST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int) AND GREATEST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int))
-                THEN placement_curver + SIGN(\$" . ($baseIdx - 2) . "::int - \$" . ($baseIdx - 1) . "::int)
-                ELSE placement_curver END
-            ";
+            $curverSelector = "CASE WHEN (placement_curver BETWEEN LEAST(?::int, ?::int) AND GREATEST(?::int, ?::int))
+            THEN placement_curver + SIGN(?::int - ?::int)
+            ELSE placement_curver END";
+            $selectBindings = array_merge($selectBindings, [$from, $to, $from, $to, $from, $to]);
 
-            $selectors[] = "placement_curver BETWEEN LEAST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int) AND GREATEST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int)";
+            $whereClauses[] = "placement_curver BETWEEN LEAST(?::int, ?::int) AND GREATEST(?::int, ?::int)";
+            $whereBindings = array_merge($whereBindings, [$from, $to, $from, $to]);
         }
 
-        // Build all-time version selector
-        if ($allPositionFrom !== null && $allPositionTo !== null) {
-            $bindings[] = $allPositionFrom;
-            $bindings[] = $allPositionTo;
-            $baseIdx += 2;
+        if ($allChanged) {
+            $from = $allPositionFrom ?? $bigNumber;
+            $to = $allPositionTo ?? $bigNumber;
 
-            $allverSelector = "
-                CASE WHEN (placement_allver BETWEEN LEAST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int) AND GREATEST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int))
-                THEN placement_allver + SIGN(\$" . ($baseIdx - 2) . "::int - \$" . ($baseIdx - 1) . "::int)
-                ELSE placement_allver END
-            ";
+            $allverSelector = "CASE WHEN (placement_allver BETWEEN LEAST(?::int, ?::int) AND GREATEST(?::int, ?::int))
+            THEN placement_allver + SIGN(?::int - ?::int)
+            ELSE placement_allver END";
+            $selectBindings = array_merge($selectBindings, [$from, $to, $from, $to, $from, $to]);
 
-            $selectors[] = "placement_allver BETWEEN LEAST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int) AND GREATEST(\$" . ($baseIdx - 2) . "::int, \$" . ($baseIdx - 1) . "::int)";
+            $whereClauses[] = "placement_allver BETWEEN LEAST(?::int, ?::int) AND GREATEST(?::int, ?::int)";
+            $whereBindings = array_merge($whereBindings, [$from, $to, $from, $to]);
         }
 
-        $bindings[] = $now;
-        $bindings[] = $ignoreCode;
-        $baseIdx += 1;
-        $timestampIdx = $baseIdx;
-        $ignoreCodeIdx = $baseIdx + 1;
+        $whereClause = implode(' OR ', $whereClauses);
 
-        // Build and execute the query
-        $sql = "
-            INSERT INTO map_list_meta
-                (placement_curver, placement_allver, code, difficulty, botb_difficulty, optimal_heros, created_on)
-            SELECT
-                {$curverSelector},
-                {$allverSelector},
-                code, difficulty, botb_difficulty, optimal_heros, \${$timestampIdx}::timestamp
-            FROM latest_maps_meta(\${$timestampIdx}::timestamp) mlm
-            WHERE mlm.deleted_on IS NULL
-                AND (" . implode(' OR ', $selectors) . ")
-                AND mlm.code != \${$ignoreCodeIdx}
-        ";
+        $bindings = array_merge(
+            $selectBindings,
+            [$now->toDateTimeString()],
+            [$now->toDateTimeString()],
+            $whereBindings,
+            [$ignoreCode],
+        );
 
-        DB::statement($sql, $bindings);
+        DB::statement(
+            "INSERT INTO map_list_meta
+            (placement_curver, placement_allver, code, difficulty, botb_difficulty, optimal_heros, created_on)
+        SELECT
+            {$curverSelector},
+            {$allverSelector},
+            code, difficulty, botb_difficulty, optimal_heros,
+            ?::timestamp
+        FROM latest_maps_meta(?::timestamp) mlm
+        WHERE mlm.deleted_on IS NULL
+            AND ({$whereClause})
+            AND mlm.code != ?",
+            $bindings
+        );
 
-        Log::info('Reranked map placements', [
-            'cur_from' => $curPositionFrom,
-            'cur_to' => $curPositionTo,
-            'all_from' => $allPositionFrom,
-            'all_to' => $allPositionTo,
-            'ignore_code' => $ignoreCode,
+        Log::info("Reranked maps", [
+            'curPositionFrom' => $curPositionFrom,
+            'curPositionTo' => $curPositionTo,
+            'allPositionFrom' => $allPositionFrom,
+            'allPositionTo' => $allPositionTo,
+            'ignoreCode' => $ignoreCode,
         ]);
     }
 
