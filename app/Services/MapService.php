@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constants\FormatConstants;
 use App\Models\MapListMeta;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -144,5 +145,56 @@ class MapService
                 'new_code' => $ignoreCode,
             ]);
         }
+    }
+
+    /**
+     * Permission to field mapping for MapListMeta
+     */
+    public function getPermissionFieldMapping(): array
+    {
+        return [
+            FormatConstants::MAPLIST => 'placement_curver',
+            FormatConstants::MAPLIST_ALL_VERSIONS => 'placement_allver',
+            FormatConstants::EXPERT_LIST => 'difficulty',
+            FormatConstants::BEST_OF_THE_BEST => 'botb_difficulty',
+            FormatConstants::NOSTALGIA_PACK => 'remake_of',
+        ];
+    }
+
+    /**
+     * Filter meta fields based on user's format permissions
+     *
+     * @param array $input Validated request input
+     * @param array $userFormatIds Format IDs where user has edit:map permission
+     * @param MapListMeta|null $existingMeta Existing meta for PUT (null for POST)
+     * @return array Filtered meta fields
+     */
+    public function filterMetaFieldsByPermissions(
+        array $input,
+        array $userFormatIds,
+        ?MapListMeta $existingMeta = null
+    ): array {
+        $permissionFields = $this->getPermissionFieldMapping();
+        $filtered = [];
+
+        foreach ($permissionFields as $formatId => $field) {
+            if (in_array($formatId, $userFormatIds)) {
+                // User has permission for this field, use the value from input
+                if (array_key_exists($field, $input)) {
+                    $filtered[$field] = $input[$field];
+                }
+            } else {
+                // User lacks permission for this field
+                if ($existingMeta) {
+                    // PUT: Use existing value
+                    $filtered[$field] = $existingMeta->$field;
+                } else {
+                    // POST: Set to null
+                    $filtered[$field] = null;
+                }
+            }
+        }
+
+        return $filtered;
     }
 }

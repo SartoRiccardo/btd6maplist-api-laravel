@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Constants\FormatConstants;
 use App\Http\Requests\Map\IndexMapRequest;
+use App\Http\Requests\Map\MapRequest;
 use App\Http\Requests\Map\StoreMapRequest;
-use App\Http\Requests\Map\UpdateMapRequest;
 use App\Models\Config;
 use App\Models\Creator;
 use App\Models\Map;
@@ -276,7 +276,9 @@ class MapController
      *     @OA\Response(
      *         response=201,
      *         description="Map created successfully",
-     *         @OA\JsonContent(ref="#/components/schemas/Map")
+     *         @OA\JsonContent(
+     *             @OA\Property(property="code", type="string", description="The created map code", example="TKIEXYSQ")
+     *         )
      *     ),
      *     @OA\Response(response=403, description="Forbidden - User lacks edit:map permission"),
      *     @OA\Response(response=422, description="Validation error")
@@ -296,10 +298,16 @@ class MapController
         }
 
         $validated = $request->validated();
+        $mapService->validatePlacementMax(
+            null, // New map, no existing meta
+            $validated['placement_curver'],
+            $validated['placement_allver'],
+            $now
+        );
 
         return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now) {
             // Filter meta fields based on user permissions
-            $metaFields = $this->filterMetaFieldsByPermissions(
+            $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
                 $userFormatIds,
                 null  // POST: non-permitted fields → NULL
@@ -328,120 +336,49 @@ class MapController
                 'deleted_on' => null,
             ]);
 
-            // Handle reranking if placements were set
-            $hasGlobalPermission = in_array(null, $userFormatIds, true);
-            $hasMaplistPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST, $userFormatIds);
-            $hasMaplistAllPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
-
-            $curPositionFrom = null;
-            $curPositionTo = $hasMaplistPermission ? ($metaFields['placement_curver'] ?? null) : null;
-            $allPositionFrom = null;
-            $allPositionTo = $hasMaplistAllPermission ? ($metaFields['placement_allver'] ?? null) : null;
-
             $mapService->rerankPlacements(
-                $curPositionFrom,
-                $curPositionTo,
-                $allPositionFrom,
-                $allPositionTo,
+                null,
+                $metaFields['placement_curver'],
+                null,
+                $metaFields['placement_allver'],
                 $map->code,
                 $now
             );
 
             // Handle remake_of cleanup
-            if (isset($metaFields['remake_of']) && $metaFields['remake_of'] !== null) {
+            if ($metaFields['remake_of'] !== null) {
                 $mapService->clearPreviousRemakeOf($metaFields['remake_of'], $map->code, $now);
             }
 
             // Create creators if provided
             if (isset($validated['creators']) && is_array($validated['creators'])) {
-                foreach ($validated['creators'] as $userId) {
+                foreach ($validated['creators'] as $creator) {
                     Creator::create([
                         'map_code' => $map->code,
-                        'user_id' => $userId,
+                        'user_id' => $creator['user_id'],
+                        'role' => $creator['role'] ?? null,
                     ]);
                 }
             }
 
             // Create verifiers if provided
             if (isset($validated['verifiers']) && is_array($validated['verifiers'])) {
-                foreach ($validated['verifiers'] as $userId) {
+                foreach ($validated['verifiers'] as $verifier) {
                     Verification::create([
                         'map_code' => $map->code,
-                        'user_id' => $userId,
-                        'version' => null,  // Version-less verifiers
+                        'user_id' => $verifier['user_id'],
+                        'version' => $verifier['version'] ?? null,
                     ]);
                 }
             }
 
-            // Load fresh data for response
-            $map->refresh();
-            $meta->refresh();
-            $meta->load('retroMap.game');
-
-            // Build response
-            $result = [
-                ...$map->toArray(),
-                ...$meta->toArray(),
-                'is_verified' => false,  // New maps are not verified
-            ];
-
-            return response()->json($result, 201);
+            return response()->json(['code' => $map->code], 201);
         });
     }
 
     public function submit(Request $request)
     {
         return response()->json(['message' => 'Not Implemented'], 501);
-    }
-
-    /**
-     * Permission to field mapping for MapListMeta
-     */
-    private function getPermissionFieldMapping(): array
-    {
-        return [
-            FormatConstants::MAPLIST => 'placement_curver',
-            FormatConstants::MAPLIST_ALL_VERSIONS => 'placement_allver',
-            FormatConstants::EXPERT_LIST => 'difficulty',
-            FormatConstants::BEST_OF_THE_BEST => 'botb_difficulty',
-            FormatConstants::NOSTALGIA_PACK => 'remake_of',
-        ];
-    }
-
-    /**
-     * Filter meta fields based on user's format permissions
-     *
-     * @param array $input Validated request input
-     * @param array $userFormatIds Format IDs where user has edit:map permission
-     * @param MapListMeta|null $existingMeta Existing meta for PUT (null for POST)
-     * @return array Filtered meta fields
-     */
-    private function filterMetaFieldsByPermissions(
-        array $input,
-        array $userFormatIds,
-        ?MapListMeta $existingMeta = null
-    ): array {
-        $permissionFields = $this->getPermissionFieldMapping();
-        $filtered = [];
-
-        foreach ($permissionFields as $formatId => $field) {
-            if (in_array($formatId, $userFormatIds)) {
-                // User has permission for this field, use the value from input
-                if (array_key_exists($field, $input)) {
-                    $filtered[$field] = $input[$field];
-                }
-            } else {
-                // User lacks permission for this field
-                if ($existingMeta) {
-                    // PUT: Use existing value
-                    $filtered[$field] = $existingMeta->$field;
-                } else {
-                    // POST: Set to null (already filtered by not adding to array)
-                }
-            }
-        }
-
-        return $filtered;
     }
 
     /**
@@ -468,16 +405,15 @@ class MapController
      *         )
      *     ),
      *     @OA\Response(
-     *         response=200,
-     *         description="Map updated successfully",
-     *         @OA\JsonContent(ref="#/components/schemas/Map")
+     *         response=204,
+     *         description="Map updated successfully"
      *     ),
      *     @OA\Response(response=403, description="Forbidden - User lacks edit:map permission"),
      *     @OA\Response(response=404, description="Map not found"),
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function update(UpdateMapRequest $request, $id, MapService $mapService)
+    public function update(MapRequest $request, $id, MapService $mapService)
     {
         $now = Carbon::now();
         $user = auth()->guard('discord')->user();
@@ -508,119 +444,76 @@ class MapController
         }
 
         $validated = $request->validated();
+        $mapService->validatePlacementMax(
+            $existingMeta,
+            $validated['placement_curver'],
+            $validated['placement_allver'],
+            $now
+        );
 
         return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now) {
             // Filter meta fields based on user permissions
-            $metaFields = $this->filterMetaFieldsByPermissions(
+            $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
                 $userFormatIds,
-                $existingMeta  // PUT: non-permitted fields → use existing values
+                $existingMeta
             );
 
-            // Check if any permission-based field actually changed
-            $metaFieldsChanged = false;
-            $permissionFields = $this->getPermissionFieldMapping();
+            // Update Map fields
+            $map->name = $validated['name'];
+            $map->r6_start = $validated['r6_start'] ?? null;
+            $map->map_data = $validated['map_data'] ?? null;
+            $map->map_preview_url = $validated['map_preview_url'] ?? null;
+            $map->map_notes = $validated['map_notes'] ?? null;
+            $map->save();
 
+            // Update creators
+            Creator::where('map_code', $map->code)->delete();
+            foreach ($validated['creators'] ?? [] as $creator) {
+                Creator::create([
+                    'map_code' => $map->code,
+                    'user_id' => $creator['user_id'],
+                    'role' => $creator['role'] ?? null,
+                ]);
+            }
+
+            // Update verifiers
+            Verification::where('map_code', $map->code)->whereNull('version')->delete();
+            foreach ($validated['verifiers'] ?? [] as $verifier) {
+                Verification::create([
+                    'map_code' => $map->code,
+                    'user_id' => $verifier['user_id'],
+                    'version' => $verifier['version'] ?? null,
+                ]);
+            }
+
+            // Check if meta fields changed
+            $permissionFields = $mapService->getPermissionFieldMapping();
+            $metaFieldsChanged = false;
             foreach ($permissionFields as $field) {
-                $oldValue = $existingMeta->$field;
-                $newValue = $metaFields[$field] ?? null;
-                if ($oldValue !== $newValue) {
+                if ($existingMeta->$field !== ($metaFields[$field] ?? null)) {
                     $metaFieldsChanged = true;
                     break;
                 }
             }
-
-            // Update Map fields if provided
-            if (isset($validated['code'])) {
-                $map->code = $validated['code'];
-            }
-            if (isset($validated['name'])) {
-                $map->name = $validated['name'];
-            }
-            if (array_key_exists('r6_start', $validated)) {
-                $map->r6_start = $validated['r6_start'];
-            }
-            if (array_key_exists('map_data', $validated)) {
-                $map->map_data = $validated['map_data'];
-            }
-            if (array_key_exists('map_preview_url', $validated)) {
-                $map->map_preview_url = $validated['map_preview_url'];
-            }
-            if (array_key_exists('map_notes', $validated)) {
-                $map->map_notes = $validated['map_notes'];
-            }
-            $map->save();
-
-            // Handle creators update
-            if (array_key_exists('creators', $validated)) {
-                // Delete existing creators
-                Creator::where('map_code', $map->code)->delete();
-
-                // Create new creators
-                if (is_array($validated['creators'])) {
-                    foreach ($validated['creators'] as $userId) {
-                        Creator::create([
-                            'map_code' => $map->code,
-                            'user_id' => $userId,
-                        ]);
-                    }
-                }
-            }
-
-            // Handle verifiers update
-            if (array_key_exists('verifiers', $validated)) {
-                // Delete existing version-less verifiers
-                Verification::where('map_code', $map->code)
-                    ->whereNull('version')
-                    ->delete();
-
-                // Create new verifiers
-                if (is_array($validated['verifiers'])) {
-                    foreach ($validated['verifiers'] as $userId) {
-                        Verification::create([
-                            'map_code' => $map->code,
-                            'user_id' => $userId,
-                            'version' => null,
-                        ]);
-                    }
-                }
-            }
-
-            // Create new MapListMeta only if permission-based fields changed
-            // or if optimal_heros changed (not permission-restricted)
-            $optimalHeroesChanged = isset($validated['optimal_heros'])
-                && $existingMeta->optimal_heros !== $validated['optimal_heros'];
+            $optimalHeroesChanged = ($validated['optimal_heros'] ?? []) !== $existingMeta->optimal_heros;
 
             if ($metaFieldsChanged || $optimalHeroesChanged) {
-                // Handle reranking if placements changed
-                $hasGlobalPermission = in_array(null, $userFormatIds, true);
-                $hasMaplistPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST, $userFormatIds);
-                $hasMaplistAllPermission = $hasGlobalPermission || in_array(FormatConstants::MAPLIST_ALL_VERSIONS, $userFormatIds);
-
-                $curPositionFrom = $hasMaplistPermission ? $existingMeta->placement_curver : null;
-                $curPositionTo = $hasMaplistPermission ? ($metaFields['placement_curver'] ?? $existingMeta->placement_curver) : null;
-                $allPositionFrom = $hasMaplistAllPermission ? $existingMeta->placement_allver : null;
-                $allPositionTo = $hasMaplistAllPermission ? ($metaFields['placement_allver'] ?? $existingMeta->placement_allver) : null;
-
                 $mapService->rerankPlacements(
-                    $curPositionFrom,
-                    $curPositionTo,
-                    $allPositionFrom,
-                    $allPositionTo,
+                    $existingMeta->placement_curver,
+                    $metaFields['placement_curver'] ?? $existingMeta->placement_curver,
+                    $existingMeta->placement_allver,
+                    $metaFields['placement_allver'] ?? $existingMeta->placement_allver,
                     $map->code,
                     $now
                 );
 
-                // Handle remake_of cleanup if changed
-                $oldRemakeOf = $existingMeta->remake_of;
                 $newRemakeOf = $metaFields['remake_of'] ?? $existingMeta->remake_of;
-
-                if ($oldRemakeOf !== $newRemakeOf && $newRemakeOf !== null) {
+                if ($existingMeta->remake_of !== $newRemakeOf && $newRemakeOf !== null) {
                     $mapService->clearPreviousRemakeOf($newRemakeOf, $map->code, $now);
                 }
 
-                // Create new MapListMeta
-                $meta = MapListMeta::create([
+                MapListMeta::create([
                     'code' => $map->code,
                     'placement_curver' => $metaFields['placement_curver'] ?? $existingMeta->placement_curver,
                     'placement_allver' => $metaFields['placement_allver'] ?? $existingMeta->placement_allver,
@@ -631,34 +524,9 @@ class MapController
                     'created_on' => $now,
                     'deleted_on' => null,
                 ]);
-            } else {
-                $meta = $existingMeta;
             }
 
-            // Load fresh data for response
-            $map->refresh();
-            if ($metaFieldsChanged || $optimalHeroesChanged) {
-                $meta->refresh();
-            }
-            $meta->load('retroMap.game');
-
-            // Check if map is verified
-            $currentBtd6Ver = Config::loadVars(['current_btd6_ver'])->get('current_btd6_ver');
-            $isVerified = Verification::where('map_code', $map->code)
-                ->where(function ($q) use ($currentBtd6Ver) {
-                    $q->where('version', $currentBtd6Ver)
-                        ->orWhereNull('version');
-                })
-                ->exists();
-
-            // Build response
-            $result = [
-                ...$map->toArray(),
-                ...$meta->toArray(),
-                'is_verified' => $isVerified,
-            ];
-
-            return response()->json($result, 200);
+            return response()->noContent();
         });
     }
 
