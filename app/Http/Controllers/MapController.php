@@ -61,6 +61,7 @@ class MapController
         $formatSubfilter = $validated['format_subfilter'] ?? null;
 
         $latsetMetaCte = MapListMeta::activeAtTimestamp($timestamp);
+
         $metaQuery = MapListMeta::from(DB::raw("({$latsetMetaCte->toSql()}) as map_list_meta"))
             ->setBindings($latsetMetaCte->getBindings())
             ->with(['retroMap.game'])
@@ -742,14 +743,12 @@ class MapController
             $curPositionFrom = $hasMaplistPermission ? $existingMeta->placement_curver : null;
             $allPositionFrom = $hasMaplistAllPermission ? $existingMeta->placement_allver : null;
 
-            // Check if anything has actually changed
             if (
                 !($existingMeta->placement_curver !== $newPlacementCurver
                     || $existingMeta->placement_allver !== $newPlacementAllver
                     || $existingMeta->difficulty !== $newDifficulty
                     || $existingMeta->botb_difficulty !== $newBotbDifficulty
-                    || $existingMeta->remake_of !== $newRemakeOf
-                    || $existingMeta->deleted_on !== $newDeletedOn)
+                    || $existingMeta->remake_of !== $newRemakeOf)
             ) {
                 return response()->noContent();
             }
