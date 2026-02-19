@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Constants\FormatConstants;
 use App\Models\MapListMeta;
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -175,10 +176,11 @@ class MapService
         ?MapListMeta $existingMeta = null
     ): array {
         $permissionFields = $this->getPermissionFieldMapping();
+        $hasGlobalPermissions = in_array(null, $userFormatIds);
         $filtered = [];
 
         foreach ($permissionFields as $formatId => $field) {
-            if (in_array($formatId, $userFormatIds)) {
+            if ($hasGlobalPermissions || in_array($formatId, $userFormatIds)) {
                 // User has permission for this field, use the value from input
                 if (array_key_exists($field, $input)) {
                     $filtered[$field] = $input[$field];
@@ -196,5 +198,51 @@ class MapService
         }
 
         return $filtered;
+    }
+
+    /**
+     * Validate that placement values don't exceed the maximum allowed.
+     *
+     * Max = current max in list + (1 if map's value is NULL, else 0)
+     *
+     * @param MapListMeta|null $existingMeta The existing meta (null for new maps)
+     * @param int|null $placementCurver New placement_curver value
+     * @param int|null $placementAllver New placement_allver value
+     * @param Carbon $now Timestamp to check at
+     * @return void
+     * @throws ValidationException
+     */
+    public function validatePlacementMax(?MapListMeta $existingMeta, ?int $placementCurver, ?int $placementAllver, Carbon $now): void
+    {
+        $this->validateSinglePlacementMax($existingMeta, 'placement_curver', $placementCurver, $now);
+        $this->validateSinglePlacementMax($existingMeta, 'placement_allver', $placementAllver, $now);
+    }
+
+    /**
+     * Validate a single placement field value.
+     */
+    protected function validateSinglePlacementMax(?MapListMeta $existingMeta, string $field, ?int $value, Carbon $now): void
+    {
+        if ($value === null) {
+            return;
+        }
+
+        // Get current active metas and find max (includes all maps)
+        $latestMetaCte = MapListMeta::activeAtTimestamp($now);
+        $maxValue = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
+            ->setBindings($latestMetaCte->getBindings())
+            ->max($field) ?? 0;
+
+        // Check if this map was previously in the list
+        $wasInList = $existingMeta && $existingMeta->$field !== null;
+
+        $maxAllowed = $maxValue + ($wasInList ? 0 : 1);
+
+        if ($value > $maxAllowed) {
+            $fieldName = $field === 'placement_curver' ? 'Current version placement' : 'All-time version placement';
+            throw ValidationException::withMessages([
+                $field => "The {$fieldName} cannot exceed {$maxAllowed}. Maximum available position is {$maxAllowed}.",
+            ]);
+        }
     }
 }

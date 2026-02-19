@@ -24,7 +24,7 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'discord_id' => fake()->unique()->randomNumber(9, true) . '',
+            'discord_id' => fake()->unique()->numerify('##################'),
             'name' => fake()->userName(),
             'nk_oak' => null,
             'has_seen_popup' => false,

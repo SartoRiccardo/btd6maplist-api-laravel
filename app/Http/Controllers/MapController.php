@@ -300,8 +300,8 @@ class MapController
         $validated = $request->validated();
         $mapService->validatePlacementMax(
             null, // New map, no existing meta
-            $validated['placement_curver'],
-            $validated['placement_allver'],
+            $validated['placement_curver'] ?? null,
+            $validated['placement_allver'] ?? null,
             $now
         );
 
@@ -324,7 +324,7 @@ class MapController
             ]);
 
             // Create MapListMeta
-            $meta = MapListMeta::create([
+            MapListMeta::create([
                 'code' => $map->code,
                 'placement_curver' => $metaFields['placement_curver'] ?? null,
                 'placement_allver' => $metaFields['placement_allver'] ?? null,
@@ -338,9 +338,9 @@ class MapController
 
             $mapService->rerankPlacements(
                 null,
-                $metaFields['placement_curver'],
+                $metaFields['placement_curver'] ?? null,
                 null,
-                $metaFields['placement_allver'],
+                $metaFields['placement_allver'] ?? null,
                 $map->code,
                 $now
             );
@@ -446,8 +446,8 @@ class MapController
         $validated = $request->validated();
         $mapService->validatePlacementMax(
             $existingMeta,
-            $validated['placement_curver'],
-            $validated['placement_allver'],
+            $validated['placement_curver'] ?? null,
+            $validated['placement_allver'] ?? null,
             $now
         );
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Map;
 
 use App\Http\Requests\BaseRequest;
+use Illuminate\Validation\Validator;
 
 /**
  * @OA\Schema(
@@ -53,11 +54,49 @@ class MapRequest extends BaseRequest
 
             // Relations
             'creators' => ['nullable', 'array'],
-            'creators.*.user_id' => ['required', 'string', 'exists:users,discord_id'],
+            'creators.*.user_id' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
             'creators.*.role' => ['nullable', 'string'],
             'verifiers' => ['nullable', 'array'],
-            'verifiers.*.user_id' => ['required', 'string', 'exists:users,discord_id'],
-            'verifiers.*.version' => ['nullable', 'integer'],
+            'verifiers.*.user_id' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
+            'verifiers.*.version' => ['nullable', 'integer', 'min:1'],
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function ($validator) {
+            // Check for duplicate creators
+            if (isset($this->input()['creators']) && is_array($this->input()['creators'])) {
+                $userIds = [];
+                $duplicates = [];
+                foreach ($this->input()['creators'] as $idx => $creator) {
+                    if (in_array($creator['user_id'], $userIds)) {
+                        $duplicates[] = "creators.{$idx}.user_id";
+                    }
+                    $userIds[] = $creator['user_id'];
+                }
+                if (!empty($duplicates)) {
+                    foreach ($duplicates as $path) {
+                        $validator->errors()->add($path, 'Duplicate creator user_id.');
+                    }
+                }
+            }
+
+            // Check for duplicate verifiers (by user_id and version combination)
+            if (isset($this->input()['verifiers']) && is_array($this->input()['verifiers'])) {
+                $verifierKeys = [];
+                foreach ($this->input()['verifiers'] as $idx => $verifier) {
+                    $key = $verifier['user_id'] . '-' . ($verifier['version'] ?? 'null');
+                    if (in_array($key, $verifierKeys)) {
+                        $validator->errors()->add("verifiers.{$idx}.user_id", 'Duplicate verifier (same user_id and version).');
+                        break;
+                    }
+                    $verifierKeys[] = $key;
+                }
+            }
+        });
     }
 }

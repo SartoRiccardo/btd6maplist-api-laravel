@@ -23,6 +23,11 @@ class Verification extends Model
 
     protected $casts = [
         'version' => 'integer',
+        'user_id' => 'string',
+    ];
+
+    protected $hidden = [
+        'map_code',
     ];
 
     /**

@@ -22,6 +22,14 @@ class Creator extends Pivot
         'role',
     ];
 
+    protected $hidden = [
+        'map_code',
+    ];
+
+    protected $casts = [
+        'user_id' => 'string',
+    ];
+
     /**
      * Get the user who created this map.
      */
