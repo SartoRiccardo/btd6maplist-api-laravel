@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Constants\FormatConstants;
 use App\Models\MapListMeta;
 use Carbon\Carbon;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MapService
 {
@@ -243,6 +243,61 @@ class MapService
             throw ValidationException::withMessages([
                 $field => "The {$fieldName} cannot exceed {$maxAllowed}. Maximum available position is {$maxAllowed}.",
             ]);
+        }
+    }
+
+    /**
+     * Validate that aliases don't exist for other active maps.
+     *
+     * @param array $aliases Array of lowercase alias strings
+     * @param string|null $ignoreCode Map code to ignore (for updates)
+     * @param Carbon $now Timestamp to check at
+     * @return void
+     * @throws ValidationException
+     */
+    public function validateAliases(array $aliases, ?string $ignoreCode, Carbon $now): void
+    {
+        if (empty($aliases)) {
+            return;
+        }
+
+        $activeMetasCte = MapListMeta::activeAtTimestamp($now);
+        $placeholders = implode(',', array_fill(0, count($aliases), '?'));
+        $bindings = [...$activeMetasCte->getBindings(), ...$aliases];
+
+        $sql = "
+            WITH active_metas AS ({$activeMetasCte->toSql()})
+            SELECT lower(a.alias) as alias, a.map_code
+            FROM map_aliases a
+            JOIN active_metas am
+                ON a.map_code = am.code
+            WHERE am.deleted_on IS NULL
+                AND lower(a.alias) = ANY(ARRAY[{$placeholders}])
+        ";
+
+        if ($ignoreCode !== null) {
+            $sql .= " AND a.map_code != ?";
+            $bindings[] = $ignoreCode;
+        }
+
+        $existingAliases = DB::select($sql, $bindings);
+
+        if (!empty($existingAliases)) {
+            // Build map of alias -> conflicting map codes
+            $conflictsByAlias = [];
+            foreach ($existingAliases as $row) {
+                $conflictsByAlias[$row->alias][] = $row->map_code;
+            }
+
+            // Build error messages for each conflicting alias at its index
+            $errors = [];
+            foreach ($aliases as $idx => $alias) {
+                if (isset($conflictsByAlias[$alias])) {
+                    $errors["aliases.{$idx}"] = "This alias already exists for map: " . $conflictsByAlias[$alias][0];
+                }
+            }
+
+            throw ValidationException::withMessages($errors);
         }
     }
 }

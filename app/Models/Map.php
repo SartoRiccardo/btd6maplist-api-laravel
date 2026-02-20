@@ -152,6 +152,7 @@ class Map extends Model
             'deleted_on',
             'retro_map',
             'is_verified',
+            'aliases',
             'creators',
             'verifications',
         ];

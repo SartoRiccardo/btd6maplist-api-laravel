@@ -9,6 +9,7 @@ use App\Http\Requests\Map\StoreMapRequest;
 use App\Models\Config;
 use App\Models\Creator;
 use App\Models\Map;
+use App\Models\MapAlias;
 use App\Models\MapListMeta;
 use App\Models\Verification;
 use App\Services\MapService;
@@ -190,7 +191,7 @@ class MapController
         $includeVerifiersFlair = in_array('verifiers.flair', $include);
 
         // Get the map with eager loaded relationships
-        $map = Map::with('creators.user', 'verifications.user')->find($id);
+        $map = Map::with('creators.user', 'verifications.user', 'aliases')->find($id);
         if (!$map) {
             return response()->json(['message' => 'Not Found'], 404);
         }
@@ -217,6 +218,7 @@ class MapController
             'verifications' => $map->verifications->filter(function ($v) use ($currentBtd6Ver) {
                 return $v->version === null || $v->version === $currentBtd6Ver;
             }),
+            'aliases' => $map->aliases->pluck('alias')->sort()->values()->toArray(),
         ];
         $result['is_verified'] = $result['verifications']->isNotEmpty();
 
@@ -305,6 +307,12 @@ class MapController
             $now
         );
 
+        $mapService->validateAliases(
+            $validated['aliases'] ?? [],
+            null, // New map, no code to ignore
+            $now
+        );
+
         return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
@@ -368,6 +376,21 @@ class MapController
                         'map_code' => $map->code,
                         'user_id' => $verifier['user_id'],
                         'version' => $verifier['version'] ?? null,
+                    ]);
+                }
+            }
+
+            // Create aliases if provided
+            if (isset($validated['aliases']) && is_array($validated['aliases'])) {
+                $placeholders = implode(',', array_fill(0, count($validated['aliases']), '?'));
+                MapAlias::where('map_code', $map->code)
+                    ->orWhereRaw("lower(alias) = ANY(ARRAY[{$placeholders}])", $validated['aliases'])
+                    ->delete();
+
+                foreach ($validated['aliases'] as $alias) {
+                    MapAlias::create([
+                        'alias' => $alias,
+                        'map_code' => $map->code,
                     ]);
                 }
             }
@@ -451,6 +474,12 @@ class MapController
             $now
         );
 
+        $mapService->validateAliases(
+            $validated['aliases'] ?? [],
+            $map->code, // Ignore this map's existing aliases
+            $now
+        );
+
         return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
@@ -485,6 +514,21 @@ class MapController
                     'user_id' => $verifier['user_id'],
                     'version' => $verifier['version'] ?? null,
                 ]);
+            }
+
+            // Update aliases
+            if (isset($validated['aliases']) && is_array($validated['aliases'])) {
+                $placeholders = implode(',', array_fill(0, count($validated['aliases']), '?'));
+                MapAlias::where('map_code', $map->code)
+                    ->orWhereRaw("lower(alias) = ANY(ARRAY[{$placeholders}])", $validated['aliases'])
+                    ->delete();
+
+                foreach ($validated['aliases'] as $alias) {
+                    MapAlias::create([
+                        'alias' => $alias,
+                        'map_code' => $map->code,
+                    ]);
+                }
             }
 
             // Check if meta fields changed

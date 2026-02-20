@@ -15,7 +15,7 @@ use Illuminate\Validation\Validator;
  *     @OA\Property(property="placement_curver", type="integer", nullable=true, minimum=1, description="Current version placement (requires MAPLIST edit:map permission)"),
  *     @OA\Property(property="placement_allver", type="integer", nullable=true, minimum=1, description="All-time version placement (requires MAPLIST_ALL_VERSIONS edit:map permission)"),
  *     @OA\Property(property="difficulty", type="integer", nullable=true, minimum=1, description="Difficulty level (requires EXPERT_LIST edit:map permission)"),
- *     @OA\Property(property="optimal_heros", type="array", nullable=true, @OA\Items(type="string"), description="Optimal heroes for this map"),
+ *     @OA\Property(property="optimal_heros", type="array", nullable=true, maxItems=10, @OA\Items(type="string", maxLength=50), description="Optimal heroes for this map (max 10, max 50 chars each)"),
  *     @OA\Property(property="botb_difficulty", type="integer", nullable=true, minimum=1, description="Brown Border Bloat difficulty (requires BEST_OF_THE_BEST edit:map permission)"),
  *     @OA\Property(property="remake_of", type="integer", nullable=true, description="ID of the retro map this is a remake of (requires NOSTALGIA_PACK edit:map permission)"),
  *     @OA\Property(property="creators", type="array", nullable=true, @OA\Items(
@@ -25,7 +25,8 @@ use Illuminate\Validation\Validator;
  *     @OA\Property(property="verifiers", type="array", nullable=true, @OA\Items(
  *         @OA\Property(property="user_id", type="string", description="Discord user ID"),
  *         @OA\Property(property="version", type="integer", nullable=true, description="BTD6 version (null = versionless)")
- *     ), description="Array of verifiers with user IDs and optional versions")
+ *     ), description="Array of verifiers with user IDs and optional versions"),
+ *     @OA\Property(property="aliases", type="array", nullable=true, @OA\Items(type="string", maxLength=255), description="Alternative names for this map (max 255 chars each, case-insensitive unique)")
  * )
  */
 class MapRequest extends BaseRequest
@@ -47,8 +48,8 @@ class MapRequest extends BaseRequest
             'placement_curver' => ['nullable', 'integer', 'min:1'],
             'placement_allver' => ['nullable', 'integer', 'min:1'],
             'difficulty' => ['nullable', 'integer', 'between:0,4'],
-            'optimal_heros' => ['nullable', 'array'],
-            'optimal_heros.*' => ['string'],
+            'optimal_heros' => ['nullable', 'array', 'max:10'],
+            'optimal_heros.*' => ['string', 'max:50'],
             'botb_difficulty' => ['nullable', 'integer', 'between:0,4'],
             'remake_of' => ['nullable', 'integer', 'exists:retro_maps,id'],
 
@@ -59,7 +60,21 @@ class MapRequest extends BaseRequest
             'verifiers' => ['nullable', 'array'],
             'verifiers.*.user_id' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
             'verifiers.*.version' => ['present', 'nullable', 'integer', 'min:1'],
+            'aliases' => ['nullable', 'array'],
+            'aliases.*' => ['string', 'max:255'],
         ];
+    }
+
+    /**
+     * Prepare input for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('aliases') && is_array($this->input('aliases'))) {
+            $this->merge([
+                'aliases' => array_map(fn($alias) => strtolower(trim($alias)), $this->input('aliases')),
+            ]);
+        }
     }
 
     /**
@@ -95,6 +110,31 @@ class MapRequest extends BaseRequest
                         break;
                     }
                     $verifierKeys[] = $key;
+                }
+            }
+
+            // Check for duplicate heroes in optimal_heros
+            if (isset($this->input()['optimal_heros']) && is_array($this->input()['optimal_heros'])) {
+                $seenHeroes = [];
+                foreach ($this->input()['optimal_heros'] as $idx => $hero) {
+                    $normalized = strtolower(trim($hero));
+                    if (in_array($normalized, $seenHeroes)) {
+                        $validator->errors()->add("optimal_heros.{$idx}", 'Duplicate hero name.');
+                        break;
+                    }
+                    $seenHeroes[] = $normalized;
+                }
+            }
+
+            // Check for duplicate aliases within the request
+            if (isset($this->input()['aliases']) && is_array($this->input()['aliases'])) {
+                $seenAliases = [];
+                foreach ($this->input()['aliases'] as $idx => $alias) {
+                    if (in_array($alias, $seenAliases)) {
+                        $validator->errors()->add("aliases.{$idx}", 'Duplicate alias.');
+                        break;
+                    }
+                    $seenAliases[] = $alias;
                 }
             }
         });

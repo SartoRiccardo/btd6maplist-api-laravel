@@ -1,10 +1,11 @@
 <?php
 
-namespace Tests\Feature\Maps\Show;
+namespace Tests\Feature\Maps;
 
 use App\Models\Creator;
 use App\Models\Config;
 use App\Models\Map;
+use App\Models\MapAlias;
 use App\Models\MapListMeta;
 use App\Models\RetroMap;
 use App\Models\User;
@@ -29,6 +30,7 @@ class GetMapTest extends TestCase
         $expected = [
             ...MapTestHelper::mergeMapMeta($map, $meta),
             'is_verified' => false,
+            'aliases' => [],
             'creators' => [],
             'verifications' => [],
         ];
@@ -298,5 +300,28 @@ class GetMapTest extends TestCase
         ]);
 
         $this->assertEquals([$expected], $actual['verifications']);
+    }
+
+    #[Group('get')]
+    #[Group('maps')]
+    public function test_get_map_with_aliases_returns_sorted_aliases(): void
+    {
+        $map = Map::factory()->withMeta()->create();
+
+        MapAlias::factory()
+            ->count(3)
+            ->sequence(
+                ['alias' => 'zebra'],
+                ['alias' => 'apple'],
+                ['alias' => 'banana'],
+            )
+            ->for($map, 'map')
+            ->create();
+
+        $actual = $this->getJson('/api/maps/' . $map->code)
+            ->assertStatus(200)
+            ->json();
+
+        $this->assertEquals(['apple', 'banana', 'zebra'], $actual['aliases']);
     }
 }

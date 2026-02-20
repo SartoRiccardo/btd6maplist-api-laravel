@@ -85,7 +85,6 @@ class Verification extends Model
     protected static function strictFields(): array
     {
         return [
-            'map_code',
             'user_id',
             'version',
             'user',

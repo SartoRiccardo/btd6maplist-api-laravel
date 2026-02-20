@@ -68,7 +68,6 @@ class Creator extends Pivot
     {
         return [
             'user_id',
-            'map_code',
             'role',
             'user',
             'avatar_url',

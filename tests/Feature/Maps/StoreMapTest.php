@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Constants\FormatConstants;
 use App\Models\Config;
 use App\Models\Map;
+use App\Models\MapAlias;
 use App\Models\MapListMeta;
 use App\Models\RetroMap;
 use App\Models\User;
@@ -327,16 +328,56 @@ class StoreMapTest extends TestCase
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_creators_too_many_items_returns_error(): void
+    public function test_store_map_optimal_heros_too_many_items_returns_error(): void
     {
-        $this->markTestIncomplete('optimal_heros limit validation not yet implemented');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'optimal_heros' => ['Quincy', 'Gwendolin', 'Striker', 'Obyn', 'Captain Churchill', 'Benjamin', 'Etienne', 'Sauda', 'Adora', 'Brickell', 'Geraldo'],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['optimal_heros']);
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_creators_item_too_long_returns_error(): void
+    public function test_store_map_optimal_heros_item_too_long_returns_error(): void
     {
-        $this->markTestIncomplete('optimal_heros item length validation not yet implemented');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'optimal_heros' => [str_repeat('a', 51)],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['optimal_heros.0']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_optimal_heros_with_duplicates_returns_error(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'optimal_heros' => ['Quincy', 'Gwendolin', 'quincy'], // Case-insensitive duplicate
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['optimal_heros.2']);
     }
 
     #[Group('store')]
@@ -419,6 +460,7 @@ class StoreMapTest extends TestCase
             'remake_of' => $retroMap->id,
             'deleted_on' => null,
             'is_verified' => true,
+            'aliases' => [],
             'creators' => [
                 ['user_id' => $creator1->discord_id, 'role' => 'Gameplay'],
                 ['user_id' => $creator2->discord_id, 'role' => 'Design'],
@@ -777,30 +819,90 @@ class StoreMapTest extends TestCase
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_duplicate_alias_is_skipped(): void
+    public function test_store_map_with_duplicate_alias_returns_422(): void
     {
-        $this->markTestIncomplete('Future feature - map aliases');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'aliases' => ['TestAlias', 'testalias', 'AnotherAlias'],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['aliases.1']);
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_alias_taken_by_existing_map_errors_is_skipped(): void
+    public function test_store_map_with_alias_taken_by_existing_map_returns_422(): void
     {
-        $this->markTestIncomplete('Future feature - map aliases');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $existingMap = Map::factory()->create();
+        MapListMeta::factory()->for($existingMap)->create();
+        MapAlias::factory()->for($existingMap, 'map')->create(['alias' => 'ExistingAlias']);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'aliases' => ['ExistingAlias'],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['aliases.0']);
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_alias_taken_by_deleted_map_works_is_skipped(): void
+    public function test_store_map_with_alias_taken_by_deleted_map_works(): void
     {
-        $this->markTestIncomplete('Future feature - map aliases');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $existingMap = Map::factory()->create();
+        MapListMeta::factory()->for($existingMap)->create(['deleted_on' => now()->subDay()]);
+        MapAlias::factory()->for($existingMap, 'map')->create(['alias' => 'DeletedMapAlias']);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'aliases' => ['DeletedMapAlias'],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('map_aliases', [
+            'alias' => 'deletedmapalias',
+            'map_code' => 'TESTCODE',
+        ]);
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_alias_case_insensitive_is_skipped(): void
+    public function test_store_map_with_alias_case_insensitive_returns_422(): void
     {
-        $this->markTestIncomplete('Future feature - map aliases');
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $existingMap = Map::factory()->create();
+        MapListMeta::factory()->for($existingMap)->create();
+        MapAlias::factory()->for($existingMap, 'map')->create(['alias' => 'MyAlias']);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'aliases' => ['myalias'], // Different case
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['aliases.0']);
     }
 
     #[Group('store')]
