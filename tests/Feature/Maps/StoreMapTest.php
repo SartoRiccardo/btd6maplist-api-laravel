@@ -8,6 +8,7 @@ use App\Models\Map;
 use App\Models\MapListMeta;
 use App\Models\RetroMap;
 use App\Models\User;
+use Database\Factories\Sequence;
 use Tests\Traits\TestsDiscordAuthMiddleware;
 use Tests\TestCase;
 
@@ -224,128 +225,19 @@ class StoreMapTest extends TestCase
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_invalid_r6_start_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'r6_start' => 'not_an_integer',
-        ];
-
-        $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['r6_start']);
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_map_preview_url_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'map_preview_url' => 'not_a_url',
-        ];
-
-        $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['map_preview_url']);
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_map_notes_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'map_notes' => str_repeat('a', 1001),
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['map_notes'], array_keys($actual['errors']));
-    }
-
-    /*
-prompt for tmrw
-
-    test_store_map_with_invalid_r6_start_returns_error (wrong cuz its a url but ok) + test_store_map_with_invalid_map_preview_url_returns_error +
-  test_store_map_with_invalid_map_notes_returns_error + test_store_map_with_invalid_difficulty_returns_error +
-  test_store_map_with_invalid_botb_difficulty_returns_error + test_store_map_with_invalid_placement_allver_returns_error +
-  test_store_map_with_invalid_placement_curver_returns_error + test_store_map_with_invalid_remake_of_returns_error +
-  test_store_map_with_invalid_creators_returns_error + test_store_map_with_invalid_verifiers_returns_error +
-  test_store_map_with_invalid_optimal_heros_returns_error can be ONE single test btw.
-  */
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_placement_curver_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'placement_curver' => 0,
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['placement_curver'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_placement_allver_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST_ALL_VERSIONS => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'placement_allver' => -1,
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['placement_allver'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
     public function test_store_map_with_placement_curver_exceeding_max_returns_error_with_correct_max_value(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         // Create 5 maps with placement_curver set
         $maps = Map::factory()->count(5)->create();
-        foreach ($maps as $idx => $map) {
-            MapListMeta::factory()->for($map)->create(['placement_curver' => $idx + 1]);
-        }
+        MapListMeta::factory()
+            ->count(5)
+            ->sequence(fn($sequence) => [
+                'code' => $maps[$sequence->index]->code,
+                'placement_curver' => $sequence->index + 1,
+            ])
+            ->create();
 
         $payload = [
             'code' => 'TESTCODE',
@@ -353,27 +245,30 @@ prompt for tmrw
             'placement_curver' => 100,
         ];
 
-        $response = $this->actingAs($user, 'discord')
+        $errors = $this->actingAs($user, 'discord')
             ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->json('errors');
 
-        $errors = $response->json('errors.placement_curver');
-        $this->assertNotEmpty($errors);
-        $this->assertStringContainsString('6', $errors[0]);
+        $this->assertNotEmpty($errors['placement_curver']);
+        $this->assertStringContainsString('6', $errors['placement_curver'][0]);
     }
 
     #[Group('store')]
     #[Group('maps')]
     public function test_store_map_with_placement_allver_exceeding_max_returns_error_with_correct_max_value(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST_ALL_VERSIONS => ['edit:map']]);
 
         // Create 5 maps with placement_allver set
         $maps = Map::factory()->count(5)->create();
-        foreach ($maps as $idx => $map) {
-            MapListMeta::factory()->for($map)->create(['placement_allver' => $idx + 1]);
-        }
+        MapListMeta::factory()
+            ->count(5)
+            ->sequence(fn($sequence) => [
+                'code' => $maps[$sequence->index]->code,
+                'placement_allver' => $sequence->index + 1,
+            ])
+            ->create();
 
         $payload = [
             'code' => 'TESTCODE',
@@ -381,194 +276,59 @@ prompt for tmrw
             'placement_allver' => 100,
         ];
 
-        $response = $this->actingAs($user, 'discord')
+        $errors = $this->actingAs($user, 'discord')
             ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->json('errors');
 
-        $errors = $response->json('errors.placement_allver');
-        $this->assertNotEmpty($errors);
-        $this->assertStringContainsString('6', $errors[0]);
+        $this->assertNotEmpty($errors['placement_allver']);
+        $this->assertStringContainsString('6', $errors['placement_allver'][0]);
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_invalid_difficulty_returns_error(): void
+    public function test_store_map_with_multiple_invalid_fields_returns_all_errors(): void
     {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::EXPERT_LIST => ['edit:map']]);
+        $user = $this->createUserWithPermissions([null => ['edit:map']]);
 
         $payload = [
             'code' => 'TESTCODE',
             'name' => 'Test Map',
+            'r6_start' => 'not_an_integer',
+            'map_preview_url' => 'not_a_url',
+            'map_notes' => str_repeat('a', 1001),
+            'placement_curver' => 0,
+            'placement_allver' => -1,
             'difficulty' => 10,
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['difficulty'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_botb_difficulty_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::BEST_OF_THE_BEST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
             'botb_difficulty' => -1,
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['botb_difficulty'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_remake_of_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::NOSTALGIA_PACK => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
             'remake_of' => 99999,
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['remake_of'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_creators_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'creators' => [
-                ['user_id' => 'invalid_user_id'],
-            ],
-        ];
-
-        $response = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422);
-
-        $actual = $response->json();
-        $this->assertEquals(['creators.0.user_id'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_verifiers_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'verifiers' => [
-                ['user_id' => 'invalid_user_id'],
-            ],
-        ];
-
-        $actual = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422)
-            ->json();
-
-        $this->assertEquals(['verifiers.0.user_id'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_numeric_creator_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'creators' => [
-                ['user_id' => '123'], // Too short for Discord snowflake
-            ],
-        ];
-
-        $actual = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422)
-            ->json();
-
-        $this->assertEquals(['creators.0.user_id'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_numeric_verifier_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'verifiers' => [
-                ['user_id' => '-12345678901234567'], // Negative number
-            ],
-        ];
-
-        $actual = $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(422)
-            ->json();
-
-        $this->assertEquals(['verifiers.0.user_id'], array_keys($actual['errors']));
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_with_invalid_optimal_heros_returns_error(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
             'optimal_heros' => 'not_an_array',
+            'creators' => [
+                ['user_id' => 'invalid_user_id'],
+                ['user_id' => '123'], // Too short
+            ],
+            'verifiers' => [
+                ['user_id' => 'another_invalid'],
+                ['user_id' => '-12345678901234567'], // Negative
+            ],
         ];
 
-        $this->actingAs($user, 'discord')
+        $actual = $this->actingAs($user, 'discord')
             ->postJson('/api/maps', $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['optimal_heros']);
+            ->json();
+
+        $expected = ['r6_start', 'map_preview_url', 'map_notes', 'placement_curver', 'placement_allver', 'difficulty', 'botb_difficulty', 'remake_of', 'optimal_heros', 'creators.0.role', 'creators.0.user_id', 'creators.1.role', 'creators.1.user_id', 'verifiers.0.version', 'verifiers.0.user_id', 'verifiers.1.version', 'verifiers.1.user_id'];
+        $actualKeys = array_keys($actual['errors']);
+        sort($expected);
+        sort($actualKeys);
+        $this->assertEquals($expected, $actualKeys);
     }
 
     #[Group('store')]
     #[Group('maps')]
     public function test_store_map_creators_too_many_items_returns_error(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('optimal_heros limit validation not yet implemented');
     }
 
@@ -576,7 +336,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_creators_item_too_long_returns_error(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('optimal_heros item length validation not yet implemented');
     }
 
@@ -584,15 +343,16 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_happy_path_with_admin_sets_everything(): void
     {
-        $this->markTestSkipped("needs checking");
         // Create existing maps with placements so we can set position 5 and 10
         $maps = Map::factory()->count(9)->create();
-        foreach ($maps as $idx => $map) {
-            MapListMeta::factory()->for($map)->create([
-                'placement_curver' => $idx < 4 ? $idx + 1 : null, // Positions 1-4
-                'placement_allver' => $idx + 1, // Positions 1-9
-            ]);
-        }
+        MapListMeta::factory()
+            ->count($maps->count())
+            ->sequence(fn($sequence) => [
+                'code' => $maps[$sequence->index]->code,
+                'placement_curver' => $sequence->index < 4 ? $sequence->index + 1 : null,
+                'placement_allver' => $sequence->index + 1,
+            ])
+            ->create();
 
         $retroMap = RetroMap::factory()->create();
         $creator1 = User::factory()->create();
@@ -676,14 +436,17 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_at_position_n_shifts_other_maps_by_one(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         // Create 5 maps with placement_curver set
         $maps = Map::factory()->count(5)->create();
-        foreach ($maps as $idx => $map) {
-            MapListMeta::factory()->for($map)->create(['placement_curver' => $idx + 1]);
-        }
+        MapListMeta::factory()
+            ->count(5)
+            ->sequence(fn($sequence) => [
+                'code' => $maps[$sequence->index]->code,
+                'placement_curver' => $sequence->index + 1,
+            ])
+            ->create();
 
         // Insert new map at position 3
         $payload = [
@@ -720,7 +483,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_remake_of_steals_from_existing_remake(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::NOSTALGIA_PACK => ['edit:map']]);
 
         $retroMap = RetroMap::factory()->create();
@@ -759,7 +521,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_empty_creators_and_verifiers_works(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         $payload = [
@@ -789,7 +550,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_without_creators_and_verifiers_works(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         $payload = [
@@ -815,9 +575,8 @@ prompt for tmrw
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_creators_without_role_works(): void
+    public function test_store_map_creators_without_role_returns_422(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $creator = User::factory()->create();
 
@@ -831,23 +590,14 @@ prompt for tmrw
 
         $this->actingAs($user, 'discord')
             ->postJson('/api/maps', $payload)
-            ->assertStatus(201);
-
-        $actual = $this->actingAs($user, 'discord')
-            ->getJson('/api/maps/TESTCODE')
-            ->assertStatus(200)
-            ->json();
-
-        $this->assertCount(1, $actual['creators']);
-        $this->assertEquals($creator->discord_id, $actual['creators'][0]['user_id']);
-        $this->assertNull($actual['creators'][0]['role']);
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['creators.0.role']);
     }
 
     #[Group('store')]
     #[Group('maps')]
     public function test_store_map_creators_with_role_works(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $creator = User::factory()->create();
 
@@ -875,42 +625,10 @@ prompt for tmrw
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_verifiers_with_version_works(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-        $verifier = User::factory()->create();
-        $currentVersion = Config::loadVars(['current_btd6_ver'])->get('current_btd6_ver');
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'verifiers' => [
-                ['user_id' => $verifier->discord_id, 'version' => $currentVersion],
-            ],
-        ];
-
-        $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(201);
-
-        $actual = $this->actingAs($user, 'discord')
-            ->getJson('/api/maps/TESTCODE')
-            ->assertStatus(200)
-            ->json();
-
-        $this->assertArrayHasKey('verifications', $actual);
-        $this->assertIsArray($actual['verifications']);
-        $this->assertCount(1, $actual['verifications']);
-        $this->assertEquals($verifier->discord_id, $actual['verifications'][0]['user_id']);
-        $this->assertEquals($currentVersion, $actual['verifications'][0]['version']);
-    }
-
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_verifiers_without_version_works(): void
+    public function test_store_map_verifiers_without_version_returns_422(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $verifier = User::factory()->create();
 
@@ -924,25 +642,14 @@ prompt for tmrw
 
         $this->actingAs($user, 'discord')
             ->postJson('/api/maps', $payload)
-            ->assertStatus(201);
-
-        $actual = $this->actingAs($user, 'discord')
-            ->getJson('/api/maps/TESTCODE')
-            ->assertStatus(200)
-            ->json();
-
-        $this->assertArrayHasKey('verifications', $actual);
-        $this->assertIsArray($actual['verifications']);
-        $this->assertCount(1, $actual['verifications']);
-        $this->assertEquals($verifier->discord_id, $actual['verifications'][0]['user_id']);
-        $this->assertNull($actual['verifications'][0]['version']);
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['verifiers.0.version']);
     }
 
     #[Group('store')]
     #[Group('maps')]
     public function test_store_map_creators_with_various_roles_works(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $creator1 = User::factory()->create();
         $creator2 = User::factory()->create();
@@ -967,58 +674,24 @@ prompt for tmrw
             ->assertStatus(200)
             ->json();
 
-        $this->assertCount(3, $actual['creators']);
+        // Remove nested user objects for cleaner comparison
+        foreach ($actual['creators'] as &$creator) {
+            unset($creator['user']);
+        }
 
-        $creatorsByDiscordId = collect($actual['creators'])->keyBy('user_id');
-
-        $this->assertEquals('Gameplay', $creatorsByDiscordId[$creator1->discord_id]['role']);
-        $this->assertNull($creatorsByDiscordId[$creator2->discord_id]['role']);
-        $this->assertEquals('Design', $creatorsByDiscordId[$creator3->discord_id]['role']);
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
-    public function test_store_map_verifiers_with_various_versions_works(): void
-    {
-        $this->markTestSkipped("needs checking");
-        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
-        $verifier1 = User::factory()->create();
-        $verifier2 = User::factory()->create();
-        $verifier3 = User::factory()->create();
-
-        $payload = [
-            'code' => 'TESTCODE',
-            'name' => 'Test Map',
-            'verifiers' => [
-                ['user_id' => $verifier1->discord_id, 'version' => null],
-                ['user_id' => $verifier2->discord_id, 'version' => null],
-                ['user_id' => $verifier3->discord_id, 'version' => null],
-            ],
+        $expected = [
+            ['user_id' => $creator1->discord_id, 'role' => 'Gameplay'],
+            ['user_id' => $creator2->discord_id, 'role' => null],
+            ['user_id' => $creator3->discord_id, 'role' => 'Design'],
         ];
 
-        $this->actingAs($user, 'discord')
-            ->postJson('/api/maps', $payload)
-            ->assertStatus(201);
-
-        $actual = $this->actingAs($user, 'discord')
-            ->getJson('/api/maps/TESTCODE')
-            ->assertStatus(200)
-            ->json();
-
-        $this->assertCount(3, $actual['verifications']);
-
-        $verifiersByDiscordId = collect($actual['verifications'])->keyBy('user_id');
-
-        $this->assertNull($verifiersByDiscordId[$verifier1->discord_id]['version']);
-        $this->assertNull($verifiersByDiscordId[$verifier2->discord_id]['version']);
-        $this->assertNull($verifiersByDiscordId[$verifier3->discord_id]['version']);
+        $this->assertEquals($expected, $actual['creators']);
     }
 
     #[Group('store')]
     #[Group('maps')]
     public function test_store_map_with_duplicate_creator_returns_error(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $creator = User::factory()->create();
 
@@ -1039,9 +712,37 @@ prompt for tmrw
 
     #[Group('store')]
     #[Group('maps')]
+    public function test_store_map_verifiers_same_user_different_versions_works(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+        $verifier = User::factory()->create();
+        $currentVersion = Config::loadVars(['current_btd6_ver'])->get('current_btd6_ver');
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'verifiers' => [
+                ['user_id' => $verifier->discord_id, 'version' => null],
+                ['user_id' => $verifier->discord_id, 'version' => $currentVersion],
+            ],
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->postJson('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $actual = $this->actingAs($user, 'discord')
+            ->getJson('/api/maps/TESTCODE')
+            ->assertStatus(200)
+            ->json();
+
+        $this->assertCount(2, $actual['verifications']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
     public function test_store_map_with_duplicate_verifier_same_version_returns_error(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
         $verifier = User::factory()->create();
 
@@ -1064,7 +765,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_map_preview_file_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map preview file upload');
     }
 
@@ -1072,7 +772,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_both_preview_url_and_file_file_takes_precedence_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map preview file upload');
     }
 
@@ -1080,7 +779,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_duplicate_alias_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map aliases');
     }
 
@@ -1088,7 +786,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_alias_taken_by_existing_map_errors_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map aliases');
     }
 
@@ -1096,7 +793,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_alias_taken_by_deleted_map_works_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map aliases');
     }
 
@@ -1104,7 +800,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_alias_case_insensitive_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - map aliases');
     }
 
@@ -1112,7 +807,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_r6_start_future_feature_is_skipped(): void
     {
-        $this->markTestSkipped("needs checking");
         $this->markTestIncomplete('Future feature - r6_start validation');
     }
 
@@ -1120,7 +814,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_nonexistent_creator_returns_422(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         $payload = [
@@ -1141,7 +834,6 @@ prompt for tmrw
     #[Group('maps')]
     public function test_store_map_with_nonexistent_verifier_returns_422(): void
     {
-        $this->markTestSkipped("needs checking");
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
 
         $payload = [

@@ -55,10 +55,10 @@ class MapRequest extends BaseRequest
             // Relations
             'creators' => ['nullable', 'array'],
             'creators.*.user_id' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
-            'creators.*.role' => ['nullable', 'string'],
+            'creators.*.role' => ['present', 'nullable', 'string'],
             'verifiers' => ['nullable', 'array'],
             'verifiers.*.user_id' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
-            'verifiers.*.version' => ['nullable', 'integer', 'min:1'],
+            'verifiers.*.version' => ['present', 'nullable', 'integer', 'min:1'],
         ];
     }
 
