@@ -152,7 +152,7 @@ class LeaderboardTestHelper
         $config = Config::loadVars($configNames);
 
         // Fetch user's completions for format 51 (EXPERT_LIST)
-        $completions = $this->test->getJson("/api/completions?player_id={$userId}&format_id=51&per_page=150")
+        $completions = $this->test->getJson("/api/completions?player_id={$userId}&format_id=51&per_page=150&include=map.metadata")
             ->assertStatus(200)
             ->json('data');
 
@@ -177,7 +177,7 @@ class LeaderboardTestHelper
 
         $points = 0.0;
 
-        foreach ($byMap as $mapCode => $mapCompletions) {
+        foreach ($byMap as $mapCompletions) {
             $mapCompletions = collect($mapCompletions);
 
             // Check what flags exist across all completions for this map

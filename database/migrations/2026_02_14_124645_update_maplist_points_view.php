@@ -32,6 +32,7 @@ return new class extends Migration {
                 FROM map_list_meta
                 ORDER BY code DESC, created_on DESC
             ),
+            
             -- Materialized for Postgres optimization.
             maps_points AS MATERIALIZED (
                 SELECT
