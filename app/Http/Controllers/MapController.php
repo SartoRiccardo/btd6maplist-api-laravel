@@ -329,7 +329,22 @@ class MapController
             $mapPreviewUrl = Storage::disk('public')->url("map_previews/{$validated['code']}.{$extension}");
         }
 
-        return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now, $mapPreviewUrl) {
+        // Handle r6 start file upload
+        $r6StartUrl = $validated['r6_start'] ?? null;
+        if ($request->hasFile('r6_start_file')) {
+            $file = $request->file('r6_start_file');
+            $extension = $file->getClientOriginalExtension();
+
+            Storage::disk('public')->putFileAs(
+                'r6_starts',
+                $file,
+                "{$validated['code']}.{$extension}"
+            );
+
+            $r6StartUrl = Storage::disk('public')->url("r6_starts/{$validated['code']}.{$extension}");
+        }
+
+        return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now, $mapPreviewUrl, $r6StartUrl) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
@@ -341,7 +356,7 @@ class MapController
             $map = Map::create([
                 'code' => $validated['code'],
                 'name' => $validated['name'],
-                'r6_start' => $validated['r6_start'] ?? null,
+                'r6_start' => $r6StartUrl,
                 'map_data' => $validated['map_data'] ?? null,
                 'map_preview_url' => $mapPreviewUrl,
                 'map_notes' => $validated['map_notes'] ?? null,
@@ -511,7 +526,22 @@ class MapController
             $mapPreviewUrl = Storage::disk('public')->url("map_previews/{$map->code}.{$extension}");
         }
 
-        return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now, $mapPreviewUrl) {
+        // Handle r6 start file upload
+        $r6StartUrl = $validated['r6_start'] ?? null;
+        if ($request->hasFile('r6_start_file')) {
+            $file = $request->file('r6_start_file');
+            $extension = $file->getClientOriginalExtension();
+
+            Storage::disk('public')->putFileAs(
+                'r6_starts',
+                $file,
+                "{$map->code}.{$extension}"
+            );
+
+            $r6StartUrl = Storage::disk('public')->url("r6_starts/{$map->code}.{$extension}");
+        }
+
+        return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now, $mapPreviewUrl, $r6StartUrl) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
@@ -521,7 +551,7 @@ class MapController
 
             // Update Map fields
             $map->name = $validated['name'];
-            $map->r6_start = $validated['r6_start'] ?? null;
+            $map->r6_start = $r6StartUrl;
             $map->map_data = $validated['map_data'] ?? null;
             $map->map_preview_url = $mapPreviewUrl;
             $map->map_notes = $validated['map_notes'] ?? null;

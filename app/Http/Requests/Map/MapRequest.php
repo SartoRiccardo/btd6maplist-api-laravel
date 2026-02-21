@@ -8,7 +8,7 @@ use Illuminate\Validation\Validator;
 /**
  * @OA\Schema(
  *     @OA\Property(property="name", type="string", maxLength=255, description="Map name", example="In The Loop"),
- *     @OA\Property(property="r6_start", type="integer", nullable=true, minimum=0, description="BTD6 version when map was added", example=10),
+ *     @OA\Property(property="r6_start", type="string", format="uri", maxLength=500, nullable=true, description="URL to r6 start image/video"),
  *     @OA\Property(property="map_data", type="string", nullable=true, description="Map data JSON"),
  *     @OA\Property(property="map_preview_url", type="string", format="uri", maxLength=500, nullable=true, description="URL to map preview image"),
  *     @OA\Property(property="map_notes", type="string", maxLength=1000, nullable=true, description="Additional notes about the map"),
@@ -27,7 +27,8 @@ use Illuminate\Validation\Validator;
  *         @OA\Property(property="version", type="integer", nullable=true, description="BTD6 version (null = versionless)")
  *     ), description="Array of verifiers with user IDs and optional versions"),
  *     @OA\Property(property="aliases", type="array", nullable=true, @OA\Items(type="string", maxLength=255), description="Alternative names for this map (max 255 chars each, case-insensitive unique)"),
- *     @OA\Property(property="custom_map_preview_file", type="string", format="binary", description="Map preview image file (max 4.5MB, valid extensions: jpg, jpeg, png, gif, webp)")
+ *     @OA\Property(property="custom_map_preview_file", type="string", format="binary", description="Map preview image file (max 4.5MB, valid extensions: jpg, jpeg, png, gif, webp)"),
+ *     @OA\Property(property="r6_start_file", type="string", format="binary", description="R6 start image/video file (max 4.5MB, valid extensions: jpg, jpeg, png, gif, webp, mp4, webm)")
  * )
  */
 class MapRequest extends BaseRequest
@@ -40,11 +41,12 @@ class MapRequest extends BaseRequest
         return [
             // Map fields
             'name' => ['required', 'string', 'max:255'],
-            'r6_start' => ['nullable', 'integer', 'min:0'],
+            'r6_start' => ['nullable', 'url', 'max:500'],
             'map_data' => ['nullable', 'string'],
             'map_preview_url' => ['nullable', 'url', 'max:500'],
             'map_notes' => ['nullable', 'string', 'max:1000'],
             'custom_map_preview_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:4500'],
+            'r6_start_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,mp4,webm', 'max:4500'],
 
             // MapListMeta fields (all nullable, permission-checked in controller)
             'placement_curver' => ['nullable', 'integer', 'min:1'],

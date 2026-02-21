@@ -122,7 +122,7 @@ class StoreMapTest extends TestCase
         $payload = [
             'code' => 'TESTCODE',
             'name' => 'Test Map',
-            'r6_start' => 10,
+            'r6_start' => 'https://example.com/r6-start.jpg',
             'map_data' => '{}',
             'map_preview_url' => 'https://example.com/preview.png',
             'map_notes' => 'Test notes',
@@ -407,7 +407,7 @@ class StoreMapTest extends TestCase
         $payload = [
             'code' => 'TESTCODE',
             'name' => 'Test Map',
-            'r6_start' => 10,
+            'r6_start' => 'https://example.com/r6-start.jpg',
             'map_data' => '{}',
             'map_preview_url' => 'https://example.com/preview.png',
             'map_notes' => 'Test notes',
@@ -449,7 +449,7 @@ class StoreMapTest extends TestCase
         $expected = Map::jsonStructure([
             'code' => 'TESTCODE',
             'name' => 'Test Map',
-            'r6_start' => '10',
+            'r6_start' => 'https://example.com/r6-start.jpg',
             'map_data' => '{}',
             'map_preview_url' => 'https://example.com/preview.png',
             'map_notes' => 'Test notes',
@@ -902,6 +902,106 @@ class StoreMapTest extends TestCase
             ->post('/api/maps', $payload)
             ->assertStatus(422)
             ->assertJsonValidationErrors(['custom_map_preview_file']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_r6_start_file(): void
+    {
+        Storage::fake('public');
+
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('r6_start.jpg', 1024, 1024)->size(100);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'r6_start_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $actual = $this->actingAs($user, 'discord')
+            ->getJson('/api/maps/TESTCODE')
+            ->assertStatus(200)
+            ->json();
+
+        $this->assertStringContainsString('/storage/r6_starts/TESTCODE.jpg', $actual['r6_start']);
+        Storage::disk('public')->assertExists('r6_starts/TESTCODE.jpg');
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_both_r6_start_url_and_file_file_takes_precedence(): void
+    {
+        Storage::fake('public');
+
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('r6_start.png', 1024, 1024)->size(100);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'r6_start' => 'https://example.com/old-r6-start.png',
+            'r6_start_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $actual = $this->actingAs($user, 'discord')
+            ->getJson('/api/maps/TESTCODE')
+            ->assertStatus(200)
+            ->json();
+
+        // File should take precedence over URL
+        $this->assertStringContainsString('/storage/r6_starts/TESTCODE.png', $actual['r6_start']);
+        $this->assertStringNotContainsString('https://example.com/old-r6-start.png', $actual['r6_start']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_invalid_r6_start_file_extension_returns_422(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->create('invalid.pdf', 100); // Not an image or video
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'r6_start_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['r6_start_file']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_r6_start_file_too_large_returns_422(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('huge.jpg', 1024, 1024)->size(4501); // 4501KB = > 4.5MB
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'r6_start_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['r6_start_file']);
     }
 
     #[Group('store')]
