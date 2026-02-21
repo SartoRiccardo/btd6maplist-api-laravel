@@ -43,7 +43,7 @@ class ExpertListTest extends TestCase
         $user = User::factory()->create();
         $formatId = FormatConstants::EXPERT_LIST;
 
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 2])->create();
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
             ->for($completion)
@@ -80,7 +80,7 @@ class ExpertListTest extends TestCase
     public function test_three_completions_same_map_no_modifiers_counted_once(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 3])->create();
 
         $completions = Completion::factory()
             ->count(3)
@@ -109,7 +109,7 @@ class ExpertListTest extends TestCase
     public function test_lcc_modifier_applied(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 1])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -128,7 +128,7 @@ class ExpertListTest extends TestCase
     public function test_no_geraldo_modifier_applied(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 4])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -146,7 +146,7 @@ class ExpertListTest extends TestCase
     public function test_black_border_modifier_applied(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 2])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -164,7 +164,7 @@ class ExpertListTest extends TestCase
     public function test_bb_and_ng_same_completion_multipliers(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 3])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -186,7 +186,7 @@ class ExpertListTest extends TestCase
     public function test_bb_and_ng_different_completions_multipliers(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 4])->create();
 
         $completions = Completion::factory()
             ->count(2)
@@ -217,7 +217,7 @@ class ExpertListTest extends TestCase
     public function test_only_latest_meta_counts(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 1])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
 
@@ -299,7 +299,7 @@ class ExpertListTest extends TestCase
     public function test_deleted_completion_not_counted(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 3])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -320,7 +320,7 @@ class ExpertListTest extends TestCase
     public function test_pending_completion_not_counted(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 2])->create();
 
         $completion = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -340,7 +340,7 @@ class ExpertListTest extends TestCase
     public function test_maplist_completions_not_counted_for_expert_list(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0, 'placement_curver' => 1])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 1, 'placement_curver' => 1])->create();
 
         $comp1 = Completion::factory()->create(['map_code' => $map->code]);
         CompletionMeta::factory()
@@ -402,7 +402,7 @@ class ExpertListTest extends TestCase
     {
         $user1 = User::factory()->create(['discord_id' => '111']);
         $user2 = User::factory()->create(['discord_id' => '222']);
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 4])->create();
 
         $completions = Completion::factory()
             ->count(2)
@@ -434,7 +434,7 @@ class ExpertListTest extends TestCase
     public function test_deleted_and_pending_on_same_map_with_valid(): void
     {
         $user = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 2])->create();
 
         $completions = Completion::factory()
             ->count(3)
@@ -470,7 +470,7 @@ class ExpertListTest extends TestCase
     {
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
-        $map = Map::factory()->withMeta(['difficulty' => 0])->create();
+        $map = Map::factory()->withMeta(['difficulty' => 3])->create();
 
         $completions = Completion::factory()
             ->count(2)
