@@ -9,8 +9,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        DB::select("
-            CREATE OR REPLACE FUNCTION leaderboard_no_geraldo(format_id INT)
+        DB::select("CREATE OR REPLACE FUNCTION leaderboard_no_geraldo(format_id INT)
             RETURNS TABLE (
                 user_id BIGINT,
                 score INT,

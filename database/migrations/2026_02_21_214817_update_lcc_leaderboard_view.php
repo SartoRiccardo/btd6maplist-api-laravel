@@ -9,7 +9,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        DB::select("CREATE OR REPLACE FUNCTION leaderboard_black_border(format_id INT)
+        DB::select("CREATE OR REPLACE FUNCTION leaderboard_lccs(format_id INT)
             RETURNS TABLE (
                 user_id BIGINT,
                 score INT,
@@ -46,29 +46,27 @@ return new class extends Migration {
                 ),
 
                 -- Completion building & calculations
-                black_border_completions AS (
-                    SELECT DISTINCT c.map_code, lcp.user_id
-                    FROM completions c
-                    JOIN active_completion_metas r
-                        ON c.id = r.completion_id
+                valid_lccs AS (
+                    SELECT DISTINCT ON (map) *
+                    FROM lccs_by_map lccs
                     LEFT JOIN formats_rules_subsets f
-                        ON r.format_id = f.format_child AND format_id = f.format_parent
-                    JOIN comp_players lcp
-                        ON r.id = lcp.run
-                    WHERE r.black_border
-                        AND r.accepted_by_id IS NOT NULL
-                        AND r.deleted_on IS NULL
-                        AND (
-                            f.format_parent IS NOT NULL  -- matched via subset rules
-                            OR r.format_id = format_id   -- direct match (fallback when no subset rows)
-                        )
+                        ON lccs.format = f.format_child AND format_id = f.format_parent
+                    WHERE f.format_parent IS NOT NULL  -- matched via subset rules
+                        OR lccs.format = format_id   -- direct match (fallback when no subset rows)
+                    ORDER BY lccs.map DESC, lccs.leftover DESC
                 ),
                 leaderboard AS (
-                    SELECT r.user_id, COUNT(*) AS score
-                    FROM black_border_completions r
+                    SELECT lcp.user_id, COUNT(lcp.user_id) AS score
+                    FROM valid_lccs lccs
+                    JOIN active_completion_metas r
+                        ON r.lcc_id = lccs.id
                     JOIN valid_maps m
-                        ON r.map_code = m.code
-                    GROUP BY r.user_id
+                        ON lccs.map = m.code
+                    JOIN comp_players lcp
+                        ON r.id = lcp.run
+                    WHERE r.accepted_by_id IS NOT NULL
+                        AND r.deleted_on IS NULL
+                    GROUP BY lcp.user_id
                 )
                 SELECT user_id, score, RANK() OVER(ORDER BY score DESC) AS placement
                 FROM leaderboard
