@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Sequence;
 #[Group('get')]
 #[Group('formats')]
 #[Group('leaderboard')]
-#[Group('blackborder')]
-class BlackBorderTest extends TestsLeaderboardValueBehavior
+#[Group('nogeraldo')]
+class NoGeraldoTest extends TestsLeaderboardValueBehavior
 {
     protected function formatId(): int
     {
@@ -33,26 +33,26 @@ class BlackBorderTest extends TestsLeaderboardValueBehavior
 
     protected function completionMetaAttributes(): array
     {
-        return ['black_border' => true];
+        return ['no_geraldo' => true];
     }
 
     protected function validCompletionMetaFactory(): mixed
     {
-        return CompletionMeta::factory()->state(['black_border' => true]);
+        return CompletionMeta::factory()->state(['no_geraldo' => true]);
     }
 
     protected function invalidCompletionMetaFactory(): mixed
     {
-        return CompletionMeta::factory()->state(['black_border' => false]);
+        return CompletionMeta::factory()->state(['no_geraldo' => false]);
     }
 
     protected function leaderboardValueParam(): string
     {
-        return 'black_border';
+        return 'no_geraldo';
     }
 
-    // Custom test specific to black border (multiple completions on same map)
-    public function test_three_bb_completions_same_map_counted_once(): void
+    // Custom test specific to no geraldo (multiple completions on same map)
+    public function test_three_ng_completions_same_map_counted_once(): void
     {
         $user = User::factory()->create();
         $map = Map::factory()->withMeta(['placement_curver' => 1])->create();
@@ -74,7 +74,7 @@ class BlackBorderTest extends TestsLeaderboardValueBehavior
             ->withPlayers([$user])
             ->create();
 
-        $actual = $this->getJson('/api/formats/1/leaderboard?value=black_border')
+        $actual = $this->getJson('/api/formats/1/leaderboard?value=no_geraldo')
             ->assertStatus(200)
             ->json();
 
