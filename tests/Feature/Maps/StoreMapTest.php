@@ -1094,13 +1094,6 @@ class StoreMapTest extends TestCase
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_r6_start_future_feature_is_skipped(): void
-    {
-        $this->markTestIncomplete('Future feature - r6_start validation');
-    }
-
-    #[Group('store')]
-    #[Group('maps')]
     public function test_store_map_with_nonexistent_creator_returns_422(): void
     {
         $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
