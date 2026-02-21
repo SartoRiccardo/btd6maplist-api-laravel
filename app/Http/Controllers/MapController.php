@@ -596,36 +596,42 @@ class MapController
             $permissionFields = $mapService->getPermissionFieldMapping();
             $metaFieldsChanged = false;
             foreach ($permissionFields as $field) {
-                if ($existingMeta->$field !== ($metaFields[$field] ?? null)) {
+                $hasField = array_key_exists($field, $metaFields);
+                $newValue = $hasField ? $metaFields[$field] : $existingMeta->$field;
+                if ($existingMeta->$field !== $newValue) {
                     $metaFieldsChanged = true;
                     break;
                 }
             }
-            $optimalHeroesChanged = ($validated['optimal_heros'] ?? []) !== $existingMeta->optimal_heros;
+            $optimalHeroesChanged = array_key_exists('optimal_heros', $validated)
+                && $validated['optimal_heros'] !== $existingMeta->optimal_heros;
 
             if ($metaFieldsChanged || $optimalHeroesChanged) {
+                $getCurver = array_key_exists('placement_curver', $metaFields);
+                $getAllver = array_key_exists('placement_allver', $metaFields);
                 $mapService->rerankPlacements(
                     $existingMeta->placement_curver,
-                    $metaFields['placement_curver'] ?? $existingMeta->placement_curver,
+                    $getCurver ? $metaFields['placement_curver'] : $existingMeta->placement_curver,
                     $existingMeta->placement_allver,
-                    $metaFields['placement_allver'] ?? $existingMeta->placement_allver,
+                    $getAllver ? $metaFields['placement_allver'] : $existingMeta->placement_allver,
                     $map->code,
                     $now
                 );
 
-                $newRemakeOf = $metaFields['remake_of'] ?? $existingMeta->remake_of;
+                $hasRemakeOf = array_key_exists('remake_of', $metaFields);
+                $newRemakeOf = $hasRemakeOf ? $metaFields['remake_of'] : $existingMeta->remake_of;
                 if ($existingMeta->remake_of !== $newRemakeOf && $newRemakeOf !== null) {
                     $mapService->clearPreviousRemakeOf($newRemakeOf, $map->code, $now);
                 }
 
                 MapListMeta::create([
                     'code' => $map->code,
-                    'placement_curver' => $metaFields['placement_curver'] ?? $existingMeta->placement_curver,
-                    'placement_allver' => $metaFields['placement_allver'] ?? $existingMeta->placement_allver,
-                    'difficulty' => $metaFields['difficulty'] ?? $existingMeta->difficulty,
-                    'optimal_heros' => $validated['optimal_heros'] ?? $existingMeta->optimal_heros,
-                    'botb_difficulty' => $metaFields['botb_difficulty'] ?? $existingMeta->botb_difficulty,
-                    'remake_of' => $metaFields['remake_of'] ?? $existingMeta->remake_of,
+                    'placement_curver' => $getCurver ? $metaFields['placement_curver'] : $existingMeta->placement_curver,
+                    'placement_allver' => $getAllver ? $metaFields['placement_allver'] : $existingMeta->placement_allver,
+                    'difficulty' => array_key_exists('difficulty', $metaFields) ? $metaFields['difficulty'] : $existingMeta->difficulty,
+                    'optimal_heros' => array_key_exists('optimal_heros', $validated) ? $validated['optimal_heros'] : $existingMeta->optimal_heros,
+                    'botb_difficulty' => array_key_exists('botb_difficulty', $metaFields) ? $metaFields['botb_difficulty'] : $existingMeta->botb_difficulty,
+                    'remake_of' => $newRemakeOf,
                     'created_on' => $now,
                     'deleted_on' => null,
                 ]);
