@@ -17,6 +17,7 @@ use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class MapController
 {
@@ -313,7 +314,22 @@ class MapController
             $now
         );
 
-        return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now) {
+        // Handle custom map preview file upload
+        $mapPreviewUrl = $validated['map_preview_url'] ?? null;
+        if ($request->hasFile('custom_map_preview_file')) {
+            $file = $request->file('custom_map_preview_file');
+            $extension = $file->getClientOriginalExtension();
+
+            Storage::disk('public')->putFileAs(
+                'map_previews',
+                $file,
+                "{$validated['code']}.{$extension}"
+            );
+
+            $mapPreviewUrl = Storage::disk('public')->url("map_previews/{$validated['code']}.{$extension}");
+        }
+
+        return DB::transaction(function () use ($validated, $userFormatIds, $mapService, $now, $mapPreviewUrl) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
@@ -327,7 +343,7 @@ class MapController
                 'name' => $validated['name'],
                 'r6_start' => $validated['r6_start'] ?? null,
                 'map_data' => $validated['map_data'] ?? null,
-                'map_preview_url' => $validated['map_preview_url'] ?? null,
+                'map_preview_url' => $mapPreviewUrl,
                 'map_notes' => $validated['map_notes'] ?? null,
             ]);
 
@@ -480,7 +496,22 @@ class MapController
             $now
         );
 
-        return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now) {
+        // Handle custom map preview file upload
+        $mapPreviewUrl = $validated['map_preview_url'] ?? null;
+        if ($request->hasFile('custom_map_preview_file')) {
+            $file = $request->file('custom_map_preview_file');
+            $extension = $file->getClientOriginalExtension();
+
+            Storage::disk('public')->putFileAs(
+                'map_previews',
+                $file,
+                "{$map->code}.{$extension}"
+            );
+
+            $mapPreviewUrl = Storage::disk('public')->url("map_previews/{$map->code}.{$extension}");
+        }
+
+        return DB::transaction(function () use ($validated, $map, $existingMeta, $userFormatIds, $mapService, $now, $mapPreviewUrl) {
             // Filter meta fields based on user permissions
             $metaFields = $mapService->filterMetaFieldsByPermissions(
                 $validated,
@@ -492,7 +523,7 @@ class MapController
             $map->name = $validated['name'];
             $map->r6_start = $validated['r6_start'] ?? null;
             $map->map_data = $validated['map_data'] ?? null;
-            $map->map_preview_url = $validated['map_preview_url'] ?? null;
+            $map->map_preview_url = $mapPreviewUrl;
             $map->map_notes = $validated['map_notes'] ?? null;
             $map->save();
 

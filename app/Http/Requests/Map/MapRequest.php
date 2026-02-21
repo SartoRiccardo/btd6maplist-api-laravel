@@ -26,7 +26,8 @@ use Illuminate\Validation\Validator;
  *         @OA\Property(property="user_id", type="string", description="Discord user ID"),
  *         @OA\Property(property="version", type="integer", nullable=true, description="BTD6 version (null = versionless)")
  *     ), description="Array of verifiers with user IDs and optional versions"),
- *     @OA\Property(property="aliases", type="array", nullable=true, @OA\Items(type="string", maxLength=255), description="Alternative names for this map (max 255 chars each, case-insensitive unique)")
+ *     @OA\Property(property="aliases", type="array", nullable=true, @OA\Items(type="string", maxLength=255), description="Alternative names for this map (max 255 chars each, case-insensitive unique)"),
+ *     @OA\Property(property="custom_map_preview_file", type="string", format="binary", description="Map preview image file (max 4.5MB, valid extensions: jpg, jpeg, png, gif, webp)")
  * )
  */
 class MapRequest extends BaseRequest
@@ -43,6 +44,7 @@ class MapRequest extends BaseRequest
             'map_data' => ['nullable', 'string'],
             'map_preview_url' => ['nullable', 'url', 'max:500'],
             'map_notes' => ['nullable', 'string', 'max:1000'],
+            'custom_map_preview_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:4500'],
 
             // MapListMeta fields (all nullable, permission-checked in controller)
             'placement_curver' => ['nullable', 'integer', 'min:1'],

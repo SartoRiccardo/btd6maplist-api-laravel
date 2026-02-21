@@ -9,7 +9,8 @@ use App\Models\MapAlias;
 use App\Models\MapListMeta;
 use App\Models\RetroMap;
 use App\Models\User;
-use Database\Factories\Sequence;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Traits\TestsDiscordAuthMiddleware;
 use Tests\TestCase;
 
@@ -805,16 +806,102 @@ class StoreMapTest extends TestCase
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_map_preview_file_is_skipped(): void
+    public function test_store_map_with_map_preview_file(): void
     {
-        $this->markTestIncomplete('Future feature - map preview file upload');
+        Storage::fake('public');
+
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('preview.jpg', 1024, 1024)->size(100);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'custom_map_preview_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $actual = $this->actingAs($user, 'discord')
+            ->getJson('/api/maps/TESTCODE')
+            ->assertStatus(200)
+            ->json();
+
+        $this->assertStringContainsString('/storage/map_previews/TESTCODE.jpg', $actual['map_preview_url']);
+        Storage::disk('public')->assertExists('map_previews/TESTCODE.jpg');
     }
 
     #[Group('store')]
     #[Group('maps')]
-    public function test_store_map_with_both_preview_url_and_file_file_takes_precedence_is_skipped(): void
+    public function test_store_map_with_both_preview_url_and_file_file_takes_precedence(): void
     {
-        $this->markTestIncomplete('Future feature - map preview file upload');
+        Storage::fake('public');
+
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('preview.png', 1024, 1024)->size(100);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'map_preview_url' => 'https://example.com/old-preview.png',
+            'custom_map_preview_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(201);
+
+        $actual = $this->actingAs($user, 'discord')
+            ->getJson('/api/maps/TESTCODE')
+            ->assertStatus(200)
+            ->json();
+
+        // File should take precedence over URL
+        $this->assertStringContainsString('/storage/map_previews/TESTCODE.png', $actual['map_preview_url']);
+        $this->assertStringNotContainsString('https://example.com/old-preview.png', $actual['map_preview_url']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_invalid_image_extension_returns_422(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->create('invalid.pdf', 100); // Not an image
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'custom_map_preview_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['custom_map_preview_file']);
+    }
+
+    #[Group('store')]
+    #[Group('maps')]
+    public function test_store_map_with_map_preview_file_too_large_returns_422(): void
+    {
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:map']]);
+
+        $file = UploadedFile::fake()->image('huge.jpg', 1024, 1024)->size(4501);
+
+        $payload = [
+            'code' => 'TESTCODE',
+            'name' => 'Test Map',
+            'custom_map_preview_file' => $file,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->post('/api/maps', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['custom_map_preview_file']);
     }
 
     #[Group('store')]
