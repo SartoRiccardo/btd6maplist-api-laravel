@@ -7,18 +7,16 @@ use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\Map;
 use App\Models\User;
+use Tests\Abstract\TestsLeaderboardCommonBehavior;
 use Tests\Helpers\LeaderboardTestHelper;
-use Tests\Traits\TestsLeaderboardCommonBehavior;
-use Tests\TestCase;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 
 #[Group('get')]
 #[Group('formats')]
 #[Group('leaderboard')]
 #[Group('maplist')]
-class MaplistTest extends TestCase
+class MaplistTest extends TestsLeaderboardCommonBehavior
 {
-    use TestsLeaderboardCommonBehavior;
 
     protected LeaderboardTestHelper $lbHelper;
 

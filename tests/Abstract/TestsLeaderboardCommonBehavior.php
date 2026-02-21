@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Traits;
+namespace Tests\Abstract;
 
 use App\Constants\FormatConstants;
 use App\Models\Completion;
@@ -11,12 +11,12 @@ use Tests\TestCase;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 
 /**
- * Trait TestsLeaderboardCommonBehavior
+ * Abstract Class TestsLeaderboardCommonBehavior
  *
- * Injects common leaderboard tests into a test class.
+ * Provides common leaderboard tests and helper methods.
  * The class must define formatId() and mapMetaKey() abstract methods.
  */
-trait TestsLeaderboardCommonBehavior
+abstract class TestsLeaderboardCommonBehavior extends TestCase
 {
     /**
      * The format ID to test (e.g., FormatConstants::MAPLIST)
@@ -103,6 +103,15 @@ trait TestsLeaderboardCommonBehavior
         return $this->getJson($url)
             ->assertStatus(200)
             ->json();
+    }
+
+    /**
+     * Get leaderboard data with the value parameter set
+     * Override in child classes that need value-specific queries
+     */
+    protected function getLeaderboardDataWithValue(array $extraParams = []): array
+    {
+        return $this->getLeaderboardData($extraParams);
     }
 
     // -- Injected tests -- //
