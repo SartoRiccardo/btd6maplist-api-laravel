@@ -1416,4 +1416,37 @@ class UpdateMapTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['verifiers.0.user_id']);
     }
+
+    /**
+     * Dispatches a job when we have a submission for the map in a specific format,
+     * and we update that format's key's value from NULL to a valid value.
+     */
+    #[Group('update')]
+    #[Group('maps')]
+    public function test_update_map_from_null_to_value_in_submission_dispatches_accept_submission_job(): void
+    {
+        $this->markTestIncomplete('Feature not yet implemented: dispatch accept submission job when updating a format field from null to a value when there is a pending submission');
+    }
+
+    /**
+     * Map was submitted in another format, and we're setting a value for a different format.
+     * Should NOT dispatch accept submission job.
+     */
+    #[Group('update')]
+    #[Group('maps')]
+    public function test_update_map_from_different_format_submission_does_not_dispatch_job(): void
+    {
+        $this->markTestIncomplete('Feature not yet implemented: no job dispatched when setting value for format different from submission format');
+    }
+
+    /**
+     * Update from valid value to another valid value.
+     * Should NOT dispatch accept submission job (job only on null -> value transition).
+     */
+    #[Group('update')]
+    #[Group('maps')]
+    public function test_update_map_from_value_to_value_does_not_dispatch_job(): void
+    {
+        $this->markTestIncomplete('Feature not yet implemented: no job dispatched when updating from one valid value to another');
+    }
 }
