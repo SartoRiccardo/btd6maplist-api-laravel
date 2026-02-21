@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             \Database\Seeders\Core\FormatSeeder::class,
+            \Database\Seeders\Core\FormatRuleSubsetSeeder::class,
             \Database\Seeders\Core\RoleSeeder::class,
             \Database\Seeders\Core\ConfigSeeder::class,
         ]);
