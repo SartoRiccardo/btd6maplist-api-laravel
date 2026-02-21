@@ -52,7 +52,7 @@ abstract class TestCase extends BaseTestCase
     protected function needsDatabaseRefresh(): bool
     {
         $shouldRefresh = env('DB_TEST_REFRESH', false);
-        if ($shouldRefresh === 'true' || $shouldRefresh === true) {
+        if ($shouldRefresh === 'true' || $shouldRefresh === true || $shouldRefresh === '1') {
             \Log::info('DB_TEST_REFRESH environment variable detected, forcing database refresh');
             return true;
         }

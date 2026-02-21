@@ -28,7 +28,7 @@ class CompletionMeta extends Model
         'format',
         'acceptedBy',
         'copied_from',
-        'format_id',
+        // 'format_id',
         'copied_to',
         'created_on',
     ];

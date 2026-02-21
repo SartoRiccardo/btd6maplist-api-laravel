@@ -38,7 +38,7 @@ return new class extends Migration {
                     c2.value::int AS extra_nogerry,
                     cv.exp_bb_multi,
                     cv.exp_lcc_extra
-                FROM latest_maps_meta(NOW()::timestamp) m
+                FROM active_map_metas m
                 JOIN config c1
                     ON m.difficulty = c1.difficulty
                     AND c1.name LIKE 'exp_points_%'
@@ -46,33 +46,34 @@ return new class extends Migration {
                     ON m.difficulty = c2.difficulty
                     AND c2.name LIKE 'exp_nogerry_points_%'
                 CROSS JOIN config_values cv
+                WHERE m.deleted_on IS NULL
             ),
 
             -- Run merging and filter applications
             completions_with_flags AS (
                 SELECT
                     cm.id AS comp_meta_id,
-                    lc.map,
+                    lc.map_code,
                     cm.no_geraldo,
                     cm.black_border,
                     (lccs.id IS NOT NULL AND lbm.id = lccs.id) AS current_lcc
                 FROM completions lc
-                JOIN latest_completions cm
-                    ON lc.id = cm.completion
+                JOIN active_completion_metas cm
+                    ON lc.id = cm.completion_id
                 LEFT JOIN leastcostchimps lccs
-                    ON lccs.id = cm.lcc
+                    ON lccs.id = cm.lcc_id
                 LEFT JOIN lccs_by_map lbm
-                    ON lbm.map = lc.map
+                    ON lbm.map = lc.map_code
                 WHERE (
-                        cm.format BETWEEN 51 AND 100
-                        OR cm.format = 1  -- Explist completions are a superset of Maplist Completions
+                        cm.format_id BETWEEN 51 AND 100
+                        OR cm.format_id = 1  -- Explist completions are a superset of Maplist Completions
                     )
-                    AND cm.accepted_by IS NOT NULL
+                    AND cm.accepted_by_id IS NOT NULL
                     AND cm.deleted_on IS NULL
             ),
             completion_points AS (
                 SELECT
-                    c.map,
+                    c.map_code,
                     ply.user_id,
                     BOOL_OR(c.no_geraldo) AS no_geraldo,
                     BOOL_OR(c.black_border) AS black_border,
@@ -80,13 +81,13 @@ return new class extends Migration {
                 FROM completions_with_flags c
                 JOIN comp_players ply
                     ON c.comp_meta_id = ply.run
-                GROUP BY (c.map, ply.user_id)
+                GROUP BY (c.map_code, ply.user_id)
             ),
 
             -- Final calculations
             leaderboard AS (
-                SELECT 
-                    cp.user_id, 
+                SELECT
+                    cp.user_id,
                     SUM(
                         m.points * CASE WHEN cp.black_border THEN m.exp_bb_multi ELSE 1 END
                         + CASE WHEN cp.no_geraldo THEN m.extra_nogerry ELSE 0 END
@@ -94,7 +95,7 @@ return new class extends Migration {
                     ) AS score
                 FROM completion_points cp
                 JOIN expert_maps m
-                    ON m.code = cp.map
+                    ON m.code = cp.map_code
                 GROUP BY (cp.user_id)
             )
 
