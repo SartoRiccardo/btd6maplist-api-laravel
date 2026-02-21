@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\Format;
-use App\Models\MapListMeta;
 use App\Services\Discord\DiscordWebhookClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
