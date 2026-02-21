@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class FormatRuleSubset extends Pivot
 {
+    protected $table = 'formats_rules_subsets';
+
     public $timestamps = false;
     public $incrementing = false;
     protected $primaryKey = null;
