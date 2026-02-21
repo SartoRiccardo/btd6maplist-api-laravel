@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AchievementRole;
 use App\Models\User;
 use App\Services\NinjaKiwi\NinjaKiwiApiClient;
 use Carbon\Carbon;
@@ -52,6 +53,7 @@ class UserController
         $includes = array_filter(explode(',', $request->query('include', '')));
         $includeFlair = in_array('flair', $includes, true);
         $includeMedals = in_array('medals', $includes, true);
+        $includeAchRoles = in_array('achievement_roles', $includes, true);
 
         // Default timestamp to now, similar to CompletionController
         $timestamp = $request->query('timestamp', Carbon::now()->unix());
@@ -81,6 +83,11 @@ class UserController
         if ($includeMedals) {
             $carbonTimestamp = Carbon::createFromTimestamp($timestamp);
             $response['medals'] = $user->medals($carbonTimestamp);
+        }
+
+        // Include achievement roles
+        if ($includeAchRoles) {
+            $response['achievement_roles'] = AchievementRole::forUser($user->discord_id)->toArray();
         }
 
         return response()->json($response);
