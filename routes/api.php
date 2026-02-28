@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FormatController;
 use App\Http\Controllers\RetroMapController;
@@ -14,11 +13,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ImageGeneratorController;
 
-// Auth endpoints
-Route::post('/auth', [AuthController::class, 'authenticate'])
-    ->middleware('discord.auth');
-
-Route::put('/read-rules', [AuthController::class, 'readRules'])
+Route::put('/read-rules', [UserController::class, 'readRules'])
     ->middleware('discord.auth');
 
 // Config endpoints
