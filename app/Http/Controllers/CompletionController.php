@@ -6,6 +6,7 @@ use App\Http\Requests\Completion\IndexCompletionRequest;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\MapListMeta;
+use App\Services\NinjaKiwi\NinjaKiwiApiClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -187,9 +188,145 @@ class CompletionController
         ]);
     }
 
-    public function show($id)
+    /**
+     * Get a single completion by ID.
+     *
+     * @OA\Get(
+     *     path="/completions/{id}",
+     *     summary="Get a single completion",
+     *     description="Retrieves a single completion with its metadata active at the specified timestamp.",
+     *     tags={"Completions"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="The completion ID",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="timestamp",
+     *         in="query",
+     *         required=false,
+     *         description="Unix timestamp to query the completion's metadata at. Defaults to current time.",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="include",
+     *         in="query",
+     *         required=false,
+     *         description="Comma-separated list of additional data to include. Use 'map.metadata' to include map metadata at the timestamp, 'players.flair' to include player avatar and banner URLs from Ninja Kiwi, 'accepted_by.flair' to include accepter avatar and banner URLs from Ninja Kiwi.",
+     *         @OA\Schema(type="string", example="map.metadata,players.flair,accepted_by.flair")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful response",
+     *         @OA\JsonContent(ref="#/components/schemas/Completion")
+     *     ),
+     *     @OA\Response(response=404, description="Completion not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function show(Request $request, $id)
     {
-        return response()->json(['message' => 'Not Implemented'], 501);
+        $validated = $request->validate([
+            'timestamp' => 'nullable|integer|min:0',
+            'include' => 'nullable|string',
+        ]);
+
+        $timestamp = Carbon::createFromTimestamp($validated['timestamp'] ?? Carbon::now()->unix());
+        $include = array_filter(explode(',', $validated['include'] ?? ''));
+        $includeMapMetadata = in_array('map.metadata', $include);
+        $includePlayersFlair = in_array('players.flair', $include);
+        $includeAcceptedByFlair = in_array('accepted_by.flair', $include);
+
+        // Get the completion
+        $completion = Completion::with(['map', 'proofs'])->find($id);
+        if (!$completion) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        // Get active CompletionMeta at timestamp
+        $latestMetaCte = CompletionMeta::activeAtTimestamp($timestamp);
+        $metaRelations = ['lcc', 'players'];
+        if ($includeAcceptedByFlair) {
+            $metaRelations[] = 'acceptedBy';
+        }
+        $meta = CompletionMeta::from(DB::raw("({$latestMetaCte->toSql()}) as completions_meta"))
+            ->setBindings($latestMetaCte->getBindings())
+            ->with($metaRelations)
+            ->where('completion_id', $completion->id)
+            ->first();
+
+        if (!$meta) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        // Load map metadata if requested
+        $mapMetadataByKey = collect();
+        if ($includeMapMetadata) {
+            $latestMetaCte = MapListMeta::activeAtTimestamp($timestamp);
+            $mapMetadataByKey = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
+                ->setBindings($latestMetaCte->getBindings())
+                ->with(['retroMap.game'])
+                ->where('code', $completion->map->code)
+                ->get()
+                ->keyBy('code');
+        }
+
+        // Check if LCC is current
+        $isCurrentLcc = false;
+        if ($meta->lcc_id) {
+            $isCurrentLcc = DB::table('lccs_by_map')
+                ->where('id', $meta->lcc_id)
+                ->exists();
+        }
+
+        // Build result
+        $result = [
+            ...$meta->toArray(),
+            ...$completion->toArray(),
+            'map' => [
+                ...($mapMetadataByKey->get($completion->map->code) ?? collect())->toArray(),
+                ...$completion->map->toArray(),
+            ],
+            'is_current_lcc' => $isCurrentLcc,
+        ];
+
+        // Load players with flair if requested
+        if ($includePlayersFlair) {
+            $players = $meta->getRelation('players') ?? collect();
+            $result['players'] = $players->map(function ($player) {
+                $deco = null;
+                if ($player->nk_oak) {
+                    $deco = NinjaKiwiApiClient::getBtd6UserDeco($player->nk_oak);
+                }
+
+                return [
+                    ...$player->toArray(),
+                    'avatar_url' => $deco['avatar_url'] ?? null,
+                    'banner_url' => $deco['banner_url'] ?? null,
+                ];
+            });
+        }
+
+        // Load accepted_by with flair if requested
+        if ($includeAcceptedByFlair && $meta->accepted_by_id) {
+            $acceptedBy = $meta->getRelationValue('acceptedBy');
+            if ($acceptedBy) {
+                $deco = null;
+                if ($acceptedBy->nk_oak) {
+                    $deco = NinjaKiwiApiClient::getBtd6UserDeco($acceptedBy->nk_oak);
+                }
+
+                $result['accepted_by'] = [
+                    ...$acceptedBy->toArray(),
+                    'avatar_url' => $deco['avatar_url'] ?? null,
+                    'banner_url' => $deco['banner_url'] ?? null,
+                ];
+            }
+        }
+
+        return response()->json($result);
     }
 
     public function submit(Request $request)
