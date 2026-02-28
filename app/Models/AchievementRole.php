@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TestableStructure;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  */
 class AchievementRole extends Model
 {
-    use HasFactory;
+    use HasFactory, TestableStructure;
 
     protected $table = 'achievement_roles';
 
@@ -77,5 +78,35 @@ class AchievementRole extends Model
             ",
             [$userId]
         );
+    }
+
+    // -- TestableStructure -- //
+
+    protected static function defaults(array $overrides = []): array
+    {
+        return [
+            'lb_format' => 1,
+            'lb_type' => 'points',
+            'threshold' => 0,
+            'for_first' => false,
+            'tooltip_description' => null,
+            'name' => 'Test Role',
+            'clr_border' => 0,
+            'clr_inner' => 0,
+        ];
+    }
+
+    protected static function strictFields(): array
+    {
+        return [
+            'lb_format',
+            'lb_type',
+            'threshold',
+            'for_first',
+            'tooltip_description',
+            'name',
+            'clr_border',
+            'clr_inner',
+        ];
     }
 }

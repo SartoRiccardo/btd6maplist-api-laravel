@@ -25,4 +25,12 @@ class AchievementRoleFactory extends Factory
             'clr_inner' => fake()->numberBetween(0, 0xFFFFFF),
         ];
     }
+
+    public function firstPlace(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'for_first' => true,
+            'threshold' => 0,
+        ]);
+    }
 }
