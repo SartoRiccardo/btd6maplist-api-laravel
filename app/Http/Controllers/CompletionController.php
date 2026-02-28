@@ -332,11 +332,6 @@ class CompletionController
         return response()->json($result);
     }
 
-    public function submit(Request $request)
-    {
-        return response()->json(['message' => 'Not Implemented'], 501);
-    }
-
     public function transfer(Request $request)
     {
         return response()->json(['message' => 'Not Implemented'], 501);

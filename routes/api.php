@@ -82,7 +82,6 @@ Route::prefix('completions')
 
         Route::middleware('discord.auth')
             ->group(function () {
-                Route::post('/submissions', 'submit');
                 Route::put('/transfer', 'transfer');
 
                 Route::post('/', 'save');
