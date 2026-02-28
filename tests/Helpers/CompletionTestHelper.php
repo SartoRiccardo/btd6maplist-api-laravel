@@ -24,6 +24,25 @@ class CompletionTestHelper
         // Remove the nested 'completion' from meta since we're spreading it at the top level
         unset($metaArray['completion']);
 
+        // Replace accepted_by (string ID from accessor) with full user object if relationship is loaded
+        // Note: accepted_by_id is hidden, so we can't check isset($metaArray['accepted_by_id'])
+        if ($meta->relationLoaded('acceptedBy')) {
+            $acceptedBy = $meta->getRelationValue('acceptedBy');
+            if ($acceptedBy) {
+                $metaArray['accepted_by'] = $acceptedBy->toArray();
+            }
+        }
+
+        // Cast deleted_on to string to match API behavior (dates are serialized as strings)
+        if (isset($metaArray['deleted_on']) && $metaArray['deleted_on'] !== null) {
+            $metaArray['deleted_on'] = (string) $metaArray['deleted_on'];
+        }
+
+        // Cast created_on to string for consistency
+        if (isset($metaArray['created_on']) && $metaArray['created_on'] !== null) {
+            $metaArray['created_on'] = (string) $metaArray['created_on'];
+        }
+
         return Completion::jsonStructure([
             ...$metaArray,
             ...$completionArray,

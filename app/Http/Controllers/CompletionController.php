@@ -247,10 +247,7 @@ class CompletionController
 
         // Get active CompletionMeta at timestamp
         $latestMetaCte = CompletionMeta::activeAtTimestamp($timestamp);
-        $metaRelations = ['lcc', 'players'];
-        if ($includeAcceptedByFlair) {
-            $metaRelations[] = 'acceptedBy';
-        }
+        $metaRelations = ['lcc', 'players', 'acceptedBy'];
         $meta = CompletionMeta::from(DB::raw("({$latestMetaCte->toSql()}) as completions_meta"))
             ->setBindings($latestMetaCte->getBindings())
             ->with($metaRelations)
@@ -292,6 +289,21 @@ class CompletionController
             'is_current_lcc' => $isCurrentLcc,
         ];
 
+        // Replace accepted_by (string ID) with full user object
+        if ($meta->accepted_by_id) {
+            $acceptedBy = $meta->getRelationValue('acceptedBy');
+            if ($acceptedBy) {
+                $result['accepted_by'] = $acceptedBy->toArray();
+
+                // Add flair if requested
+                if ($includeAcceptedByFlair && $acceptedBy->nk_oak) {
+                    $deco = NinjaKiwiApiClient::getBtd6UserDeco($acceptedBy->nk_oak);
+                    $result['accepted_by']['avatar_url'] = $deco['avatar_url'] ?? null;
+                    $result['accepted_by']['banner_url'] = $deco['banner_url'] ?? null;
+                }
+            }
+        }
+
         // Load players with flair if requested
         if ($includePlayersFlair) {
             $players = $meta->getRelation('players') ?? collect();
@@ -307,23 +319,6 @@ class CompletionController
                     'banner_url' => $deco['banner_url'] ?? null,
                 ];
             });
-        }
-
-        // Load accepted_by with flair if requested
-        if ($includeAcceptedByFlair && $meta->accepted_by_id) {
-            $acceptedBy = $meta->getRelationValue('acceptedBy');
-            if ($acceptedBy) {
-                $deco = null;
-                if ($acceptedBy->nk_oak) {
-                    $deco = NinjaKiwiApiClient::getBtd6UserDeco($acceptedBy->nk_oak);
-                }
-
-                $result['accepted_by'] = [
-                    ...$acceptedBy->toArray(),
-                    'avatar_url' => $deco['avatar_url'] ?? null,
-                    'banner_url' => $deco['banner_url'] ?? null,
-                ];
-            }
         }
 
         return response()->json($result);

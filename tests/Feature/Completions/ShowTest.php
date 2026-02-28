@@ -31,7 +31,7 @@ class ShowTest extends TestCase
             ->withPlayers($players)
             ->create();
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}")
             ->assertStatus(200)
@@ -108,7 +108,7 @@ class ShowTest extends TestCase
             ->lcc(5000)
             ->create(['format_id' => FormatConstants::MAPLIST]);
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}")
             ->assertStatus(200)
@@ -148,7 +148,7 @@ class ShowTest extends TestCase
             ->lcc(1000)
             ->create(['format_id' => FormatConstants::MAPLIST]);
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}")
             ->assertStatus(200)
@@ -174,7 +174,7 @@ class ShowTest extends TestCase
             ->withPlayers($players)
             ->create(['lcc_id' => null]);
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}")
             ->assertStatus(200)
@@ -259,7 +259,7 @@ class ShowTest extends TestCase
         // Query at a time when the old meta was active
         $timestamp = now()->subHours(2)->subMinutes(30)->timestamp;
 
-        $oldMeta->load(['completion.map', 'players', 'lcc']);
+        $oldMeta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}?timestamp={$timestamp}")
             ->assertStatus(200)
@@ -313,7 +313,7 @@ class ShowTest extends TestCase
         // Query after the meta was deleted
         $timestamp = now()->subMinutes(30)->timestamp;
 
-        $deletedMeta->load(['completion.map', 'players', 'lcc']);
+        $deletedMeta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}?timestamp={$timestamp}")
             ->assertStatus(200)
@@ -349,7 +349,7 @@ class ShowTest extends TestCase
             ->where('code', $map->code)
             ->first();
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}?include=map.metadata")
             ->assertStatus(200)
@@ -390,7 +390,7 @@ class ShowTest extends TestCase
             'banner_url' => 'https://example.com/banner.png',
         ]);
 
-        $meta->load(['completion.map', 'players', 'lcc']);
+        $meta->load(['completion.map', 'players', 'lcc', 'acceptedBy']);
 
         $actual = $this->getJson("/api/completions/{$completion->id}?include=players.flair")
             ->assertStatus(200)
