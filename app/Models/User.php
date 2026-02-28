@@ -68,6 +68,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'discord_id' => 'string',
             'has_seen_popup' => 'boolean',
             'is_banned' => 'boolean',
         ];
