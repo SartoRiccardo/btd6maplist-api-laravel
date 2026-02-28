@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Constants\FormatConstants;
+use App\Constants\ProofType;
+use App\Http\Requests\Completion\CompletionRequest;
 use App\Http\Requests\Completion\IndexCompletionRequest;
+use App\Http\Requests\Completion\StoreCompletionRequest;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
+use App\Models\CompletionProof;
+use App\Models\Config;
+use App\Models\LeastCostChimps;
 use App\Models\MapListMeta;
 use App\Services\NinjaKiwi\NinjaKiwiApiClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CompletionController
 {
@@ -334,14 +342,282 @@ class CompletionController
         return response()->json(['message' => 'Not Implemented'], 501);
     }
 
-    public function save(Request $request)
+    /**
+     * Store a newly created completion in storage.
+     *
+     * @OA\Post(
+     *     path="/completions",
+     *     summary="Create a new completion",
+     *     description="Creates a new completion with its metadata. Requires 1-4 image proofs. To submit a completion, set accept=false and include your Discord ID in the players list. To accept a completion, set accept=true and have edit:completion permission on the format. Use multipart/form-data for file uploads.",
+     *     tags={"Completions"},
+     *     security={{"discord_auth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(ref="#/components/schemas/StoreCompletionRequest")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Completion created successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="id", type="integer", description="The created completion ID", example=123)
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden - Permission or business rule violation"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function save(StoreCompletionRequest $request)
     {
-        return response()->json(['message' => 'Not Implemented'], 501);
+        $now = Carbon::now();
+        $user = auth()->guard('discord')->user();
+        $validated = $request->validated();
+
+        // Permission check: If accept=true, user must have edit:completion on the format
+        if ($validated['accept']) {
+            $userFormatIds = $user->formatsWithPermission('edit:completion');
+            $hasGlobalPermission = in_array(null, $userFormatIds, true);
+            $hasFormatPermission = in_array($validated['format_id'], $userFormatIds);
+
+            if (!$hasGlobalPermission && !$hasFormatPermission) {
+                return response()->json(['message' => 'Forbidden - You do not have permission to accept completions for this format.'], 403);
+            }
+        }
+
+        // Validate that the map is valid for the format
+        $latestMetaCte = MapListMeta::activeAtTimestamp($now);
+        $mapMeta = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
+            ->setBindings($latestMetaCte->getBindings())
+            ->where('code', $validated['map'])
+            ->first();
+
+        if (!$mapMeta) {
+            return response()->json(['message' => 'Map not found'], 404);
+        }
+
+        // Check format-specific requirements
+        $formatId = $validated['format_id'];
+        $error = null;
+
+        if ($formatId === FormatConstants::MAPLIST) {
+            // MAPLIST: placement_curver must be >= 1 and within map_count config
+            if ($mapMeta->placement_curver === null) {
+                $error = 'Map is not in the Maplist format.';
+            } else {
+                // Load map_count config for this format
+                $mapCount = Config::loadVars(['map_count'])->get('map_count');
+
+                if ($mapMeta->placement_curver < 1 || $mapMeta->placement_curver > $mapCount) {
+                    $error = "Map's current version placement ({$mapMeta->placement_curver}) is out of valid range (1-{$mapCount}).";
+                }
+            }
+        } elseif ($formatId === FormatConstants::MAPLIST_ALL_VERSIONS) {
+            // MAPLIST_ALL_VERSIONS: placement_allver must be >= 1 and within map_count config
+            if ($mapMeta->placement_allver === null) {
+                $error = 'Map is not in the Maplist All Versions format.';
+            } else {
+                // Load map_count config for this format
+                $mapCount = Config::loadVars(['map_count'])->get('map_count');
+
+                if ($mapMeta->placement_allver < 1 || $mapMeta->placement_allver > $mapCount) {
+                    $error = "Map's all-time version placement ({$mapMeta->placement_allver}) is out of valid range (1-{$mapCount}).";
+                }
+            }
+        } elseif ($formatId === FormatConstants::EXPERT_LIST) {
+            // EXPERT_LIST: difficulty must not be null
+            if ($mapMeta->difficulty === null) {
+                $error = 'Map is not in the Expert List format.';
+            }
+        } elseif ($formatId === FormatConstants::BEST_OF_THE_BEST) {
+            // BEST_OF_THE_BEST: botb_difficulty must not be null
+            if ($mapMeta->botb_difficulty === null) {
+                $error = 'Map is not in the Best of the Best format.';
+            }
+        }
+
+        if ($error) {
+            return response()->json(['message' => $error], 422);
+        }
+
+        return DB::transaction(function () use ($validated, $user, $now, $request) {
+            // Create the Completion base record
+            $completion = Completion::create([
+                'map_code' => $validated['map'],
+                'submitted_on' => $now,
+                'subm_notes' => $validated['subm_notes'] ?? null,
+            ]);
+
+            // Handle proof image uploads
+            if ($request->hasFile('proof_images')) {
+                foreach ($request->file('proof_images') as $index => $file) {
+                    $extension = $file->getClientOriginalExtension();
+                    $path = $file->storeAs(
+                        "completion_proofs/{$completion->id}",
+                        "img_{$index}.{$extension}",
+                        'public'
+                    );
+
+                    CompletionProof::create([
+                        'run' => $completion->id,
+                        'proof_url' => Storage::disk('public')->url($path),
+                        'proof_type' => ProofType::IMAGE,
+                    ]);
+                }
+            }
+
+            // Handle video proof URLs
+            foreach ($validated['proof_videos'] as $videoUrl) {
+                CompletionProof::create([
+                    'run' => $completion->id,
+                    'proof_url' => $videoUrl,
+                    'proof_type' => ProofType::VIDEO,
+                ]);
+            }
+
+            // Handle LCC - create new record if provided
+            $lccId = null;
+            if (is_array($validated['lcc'])) {
+                $lcc = LeastCostChimps::create([
+                    'leftover' => $validated['lcc']['leftover'],
+                ]);
+                $lccId = $lcc->id;
+            }
+
+            // Handle acceptance
+            $acceptedBy = null;
+            if ($validated['accept']) {
+                $acceptedBy = $user->discord_id;
+            }
+
+            // Create CompletionMeta
+            $meta = CompletionMeta::create([
+                'completion_id' => $completion->id,
+                'format_id' => $validated['format_id'],
+                'black_border' => $validated['black_border'] ?? false,
+                'no_geraldo' => $validated['no_geraldo'] ?? false,
+                'lcc_id' => $lccId,
+                'accepted_by_id' => $acceptedBy,
+                'created_on' => $now,
+                'deleted_on' => null,
+            ]);
+
+            // Attach players via pivot table
+            $meta->players()->attach($validated['players']);
+
+            return response()->json(['id' => $completion->id], 201);
+        });
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update the specified completion in storage.
+     *
+     * @OA\Put(
+     *     path="/completions/{id}",
+     *     summary="Update a completion",
+     *     description="Updates a completion's metadata. Creates a new CompletionMeta record for versioning. User must have edit:completion permission on both the current and new format. Map code is immutable. Players list completely replaces existing players. LCC always creates a new record if provided. If the completion was previously accepted, the original accepter is preserved and the accept parameter is ignored.",
+     *     tags={"Completions"},
+     *     security={{"discord_auth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="The completion ID",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(ref="#/components/schemas/CompletionRequest")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="Completion updated successfully"
+     *     ),
+     *     @OA\Response(response=403, description="Forbidden - Permission or business rule violation"),
+     *     @OA\Response(response=404, description="Completion not found"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
+    public function update(CompletionRequest $request, $id)
     {
-        return response()->json(['message' => 'Not Implemented'], 501);
+        $now = Carbon::now();
+        $user = auth()->guard('discord')->user();
+        $validated = $request->validated();
+
+        // Get current active CompletionMeta
+        $latestMetaCte = CompletionMeta::activeAtTimestamp($now);
+        $existingMeta = CompletionMeta::from(DB::raw("({$latestMetaCte->toSql()}) as completions_meta"))
+            ->setBindings($latestMetaCte->getBindings())
+            ->where('completion_id', $id)
+            ->first();
+
+        if (!$existingMeta) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        // Permission check: Must have edit:completion on BOTH current and new format
+        $userFormatIds = $user->formatsWithPermission('edit:completion');
+        $hasGlobalPermission = in_array(null, $userFormatIds, true);
+        $hasCurrentFormatPermission = in_array($existingMeta->format_id, $userFormatIds);
+        $hasNewFormatPermission = in_array($validated['format_id'], $userFormatIds);
+
+        $canEditCurrent = $hasGlobalPermission || $hasCurrentFormatPermission;
+        $canEditNew = $hasGlobalPermission || $hasNewFormatPermission;
+
+        if (!$canEditCurrent || !$canEditNew) {
+            $missing = [];
+            if (!$canEditCurrent) {
+                $missing[] = 'current format';
+            }
+            if (!$canEditNew) {
+                $missing[] = 'new format';
+            }
+            return response()->json(['message' => 'Forbidden - You do not have edit:completion permission for the ' . implode(' and ', $missing) . '.'], 403);
+        }
+
+        return DB::transaction(function () use ($validated, $user, $now, $existingMeta) {
+            // Handle LCC - create new record if provided, otherwise remove
+            $lccId = null;
+            if (is_array($validated['lcc'])) {
+                $lcc = LeastCostChimps::create([
+                    'leftover' => $validated['lcc']['leftover'],
+                ]);
+                $lccId = $lcc->id;
+            }
+
+            // Handle acceptance - preserve existing accepter if completion was previously accepted
+            $acceptedBy = $existingMeta->accepted_by_id;
+
+            // Only process accept parameter if completion was NOT previously accepted
+            if ($acceptedBy === null) {
+                if ($validated['accept']) {
+                    $acceptedBy = $user->discord_id;
+                }
+                // If accept=false, stays null
+            }
+            // If already accepted, $acceptedBy is preserved unchanged
+
+            // Create new CompletionMeta (versioning)
+            $newMeta = CompletionMeta::create([
+                'completion_id' => $existingMeta->completion_id,
+                'format_id' => $validated['format_id'],
+                'black_border' => $validated['black_border'] ?? $existingMeta->black_border,
+                'no_geraldo' => $validated['no_geraldo'] ?? $existingMeta->no_geraldo,
+                'lcc_id' => $lccId,
+                'accepted_by_id' => $acceptedBy,
+                'created_on' => $now,
+                'deleted_on' => null,
+            ]);
+
+            // Attach players to new meta
+            $newMeta->players()->attach($validated['players']);
+
+            return response()->noContent();
+        });
     }
 
     public function destroy($id)
