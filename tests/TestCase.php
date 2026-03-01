@@ -125,4 +125,68 @@ abstract class TestCase extends BaseTestCase
         return $user;
     }
 
+    /**
+     * Pick specific keys from an array (supports dot notation for nested keys).
+     * Supports wildcard * for array items (e.g., 'players.*.discord_id').
+     *
+     * @param array $data Source array
+     * @param array $keys Keys to pick (supports dot.notation for nested arrays, and * for wildcards)
+     * @return array Array with only the picked keys
+     */
+    protected function pick(array $data, array $keys): array
+    {
+        $result = [];
+
+        foreach ($keys as $keyPath) {
+            $parts = explode('.', $keyPath);
+            $this->pickNested($data, $result, $parts);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Recursively pick nested values from array data.
+     *
+     * @param array $source Source array to extract from
+     * @param array &$result Result array to populate
+     * @param array $parts Parts of the key path
+     * @param string $pathKey Current key path for result (for nested building)
+     */
+    private function pickNested(array $source, array &$result, array $parts, string $pathKey = ''): void
+    {
+        $part = $parts[0];
+        $isLast = (count($parts) === 1);
+
+        if ($isLast) {
+            // Last part - get the value
+            if ($part === '*') {
+                // Wildcard at the end - copy all values
+                foreach ($source as $key => $value) {
+                    $result[$key] = $value;
+                }
+            } elseif (isset($source[$part])) {
+                $result[$part] = $source[$part];
+            }
+        } else {
+            // Not the last part - recurse
+            $remainingParts = array_slice($parts, 1);
+
+            if ($part === '*') {
+                // Wildcard - apply to all items in the array
+                foreach ($source as $key => $value) {
+                    if (is_array($value)) {
+                        $result[$key] = [];
+                        $this->pickNested($value, $result[$key], $remainingParts, $pathKey . $key . '.');
+                    }
+                }
+            } elseif (isset($source[$part]) && is_array($source[$part])) {
+                if (!isset($result[$part])) {
+                    $result[$part] = [];
+                }
+                $this->pickNested($source[$part], $result[$part], $remainingParts, $pathKey . $part . '.');
+            }
+        }
+    }
+
 }
