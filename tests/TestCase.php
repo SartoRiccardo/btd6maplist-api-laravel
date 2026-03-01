@@ -165,7 +165,7 @@ abstract class TestCase extends BaseTestCase
                 foreach ($source as $key => $value) {
                     $result[$key] = $value;
                 }
-            } elseif (isset($source[$part])) {
+            } elseif (array_key_exists($part, $source)) {
                 $result[$part] = $source[$part];
             }
         } else {
@@ -180,7 +180,7 @@ abstract class TestCase extends BaseTestCase
                         $this->pickNested($value, $result[$key], $remainingParts, $pathKey . $key . '.');
                     }
                 }
-            } elseif (isset($source[$part]) && is_array($source[$part])) {
+            } elseif (array_key_exists($part, $source) && is_array($source[$part])) {
                 if (!isset($result[$part])) {
                     $result[$part] = [];
                 }

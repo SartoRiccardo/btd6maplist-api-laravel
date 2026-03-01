@@ -231,7 +231,7 @@ class UpdateCompletionTest extends TestCase
     }
 
     /**
-     * Duplicate players returns 422
+     * Duplicate players returns 422 with exact key path
      */
     #[Group('put')]
     #[Group('completions')]
@@ -250,7 +250,7 @@ class UpdateCompletionTest extends TestCase
         $this->actingAs($user, 'discord')
             ->putJson("/api/completions/{$completion->id}", $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['players']);
+            ->assertJsonValidationErrors(['players.1']);
     }
 
     /**
@@ -272,6 +272,34 @@ class UpdateCompletionTest extends TestCase
         $this->actingAs($user, 'discord')
             ->putJson('/api/completions/999999', $payload)
             ->assertStatus(404);
+    }
+
+    /**
+     * Updating a deleted completion returns 422
+     */
+    #[Group('put')]
+    #[Group('completions')]
+    public function test_update_deleted_completion_returns_422(): void
+    {
+        // Create completion and mark it as deleted
+        $completion = $this->createCompletionForUpdate(FormatConstants::MAPLIST);
+        $meta = $this->getActiveMeta($completion);
+        $meta->deleted_on = Carbon::now();
+        $meta->save();
+
+        $user = $this->createUserWithPermissions([FormatConstants::MAPLIST => ['edit:completion']]);
+        $newPlayer = User::factory()->create();
+
+        $payload = [
+            'format_id' => FormatConstants::MAPLIST,
+            'players' => [$newPlayer->discord_id],
+            'accept' => true,
+        ];
+
+        $this->actingAs($user, 'discord')
+            ->putJson("/api/completions/{$completion->id}", $payload)
+            ->assertStatus(422)
+            ->assertJson(['message' => 'Cannot update a deleted completion.']);
     }
 
     /**

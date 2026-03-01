@@ -495,6 +495,11 @@ class CompletionController
             return response()->json(['message' => 'Not Found'], 404);
         }
 
+        // Business rule: Cannot update a deleted completion
+        if ($existingMeta->deleted_on !== null) {
+            return response()->json(['message' => 'Cannot update a deleted completion.'], 422);
+        }
+
         // Permission check: Must have edit:completion on BOTH current and new format
         $userFormatIds = $user->formatsWithPermission('edit:completion');
         $hasGlobalPermission = in_array(null, $userFormatIds, true);

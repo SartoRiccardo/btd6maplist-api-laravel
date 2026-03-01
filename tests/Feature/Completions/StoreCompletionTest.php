@@ -146,7 +146,7 @@ class StoreCompletionTest extends TestCase
     }
 
     /**
-     * Duplicate players returns 422
+     * Duplicate players returns 422 with exact key path
      */
     #[Group('post')]
     #[Group('completions')]
@@ -166,7 +166,7 @@ class StoreCompletionTest extends TestCase
         $this->actingAs($user, 'discord')
             ->postJson($this->endpoint(), $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['players']);
+            ->assertJsonValidationErrors(['players.1']);
     }
 
     /**

@@ -67,11 +67,15 @@ abstract class CompletionRequest extends BaseRequest
 
             $players = $data['players'] ?? [];
 
-            // Check for duplicate players
+            // Check for duplicate players and add errors for exact indices
             if (is_array($players)) {
-                $uniquePlayers = array_unique($players);
-                if (count($players) !== count($uniquePlayers)) {
-                    $validator->errors()->add('players', 'Duplicate player IDs are not allowed.');
+                $seen = [];
+                foreach ($players as $index => $playerId) {
+                    if (isset($seen[$playerId])) {
+                        $validator->errors()->add("players.{$index}", 'Duplicate player ID.');
+                    } else {
+                        $seen[$playerId] = true;
+                    }
                 }
             }
         });
