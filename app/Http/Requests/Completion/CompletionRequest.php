@@ -48,7 +48,6 @@ abstract class CompletionRequest extends BaseRequest
             'players.*' => ['required', 'string', 'regex:/^\d{17,20}$/', 'exists:users,discord_id'],
             'lcc' => ['nullable', 'array'],
             'lcc.leftover' => ['required_with:lcc', 'integer', 'min:0'],
-            'accept' => ['required', 'boolean'],
         ];
     }
 
@@ -66,8 +65,6 @@ abstract class CompletionRequest extends BaseRequest
                 return;
             }
 
-            $userDiscordId = $user->discord_id;
-            $accept = $data['accept'] ?? false;
             $players = $data['players'] ?? [];
 
             // Check for duplicate players
@@ -75,19 +72,7 @@ abstract class CompletionRequest extends BaseRequest
                 $uniquePlayers = array_unique($players);
                 if (count($players) !== count($uniquePlayers)) {
                     $validator->errors()->add('players', 'Duplicate player IDs are not allowed.');
-                    return;
                 }
-            }
-
-            // Business rule: If accept=True and user's discord_id in players -> error
-            if ($accept && in_array($userDiscordId, $players)) {
-                $validator->errors()->add('accept', 'You cannot accept your own completion.');
-                return;
-            }
-
-            // Business rule: If accept=False and user's discord_id NOT in players -> error
-            if (!$accept && !in_array($userDiscordId, $players)) {
-                $validator->errors()->add('accept', 'You must be in the players list when not accepting.');
             }
         });
     }

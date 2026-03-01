@@ -7,6 +7,7 @@ use App\Constants\ProofType;
 use App\Http\Requests\Completion\CompletionRequest;
 use App\Http\Requests\Completion\IndexCompletionRequest;
 use App\Http\Requests\Completion\StoreCompletionRequest;
+use App\Http\Requests\Completion\UpdateCompletionRequest;
 use App\Models\Completion;
 use App\Models\CompletionMeta;
 use App\Models\CompletionProof;
@@ -332,18 +333,13 @@ class CompletionController
         return response()->json($result);
     }
 
-    public function transfer(Request $request)
-    {
-        return response()->json(['message' => 'Not Implemented'], 501);
-    }
-
     /**
      * Store a newly created completion in storage.
      *
      * @OA\Post(
      *     path="/completions",
      *     summary="Create a new completion",
-     *     description="Creates a new completion with its metadata. Requires 1-4 image proofs. To submit a completion, set accept=false and include your Discord ID in the players list. To accept a completion, set accept=true and have edit:completion permission on the format. Use multipart/form-data for file uploads.",
+     *     description="Creates and auto-accepts a completion with its metadata. Admin-only endpoint requiring edit:completion permission. Use multipart/form-data for file uploads.",
      *     tags={"Completions"},
      *     security={{"discord_auth": {}}},
      *     @OA\RequestBody(
@@ -370,70 +366,18 @@ class CompletionController
         $user = auth()->guard('discord')->user();
         $validated = $request->validated();
 
-        // Permission check: If accept=true, user must have edit:completion on the format
-        if ($validated['accept']) {
-            $userFormatIds = $user->formatsWithPermission('edit:completion');
-            $hasGlobalPermission = in_array(null, $userFormatIds, true);
-            $hasFormatPermission = in_array($validated['format_id'], $userFormatIds);
-
-            if (!$hasGlobalPermission && !$hasFormatPermission) {
-                return response()->json(['message' => 'Forbidden - You do not have permission to accept completions for this format.'], 403);
-            }
+        // Business rule: Admin cannot submit a completion for themselves
+        if (in_array($user->discord_id, $validated['players'])) {
+            return response()->json(['message' => 'You cannot submit a completion that includes yourself.'], 422);
         }
 
-        // Validate that the map is valid for the format
-        $latestMetaCte = MapListMeta::activeAtTimestamp($now);
-        $mapMeta = MapListMeta::from(DB::raw("({$latestMetaCte->toSql()}) as map_list_meta"))
-            ->setBindings($latestMetaCte->getBindings())
-            ->where('code', $validated['map'])
-            ->first();
+        // Permission check: Admin must have edit:completion on the format
+        $userFormatIds = $user->formatsWithPermission('edit:completion');
+        $hasGlobalPermission = in_array(null, $userFormatIds, true);
+        $hasFormatPermission = in_array($validated['format_id'], $userFormatIds);
 
-        if (!$mapMeta) {
-            return response()->json(['message' => 'Map not found'], 404);
-        }
-
-        // Check format-specific requirements
-        $formatId = $validated['format_id'];
-        $error = null;
-
-        if ($formatId === FormatConstants::MAPLIST) {
-            // MAPLIST: placement_curver must be >= 1 and within map_count config
-            if ($mapMeta->placement_curver === null) {
-                $error = 'Map is not in the Maplist format.';
-            } else {
-                // Load map_count config for this format
-                $mapCount = Config::loadVars(['map_count'])->get('map_count');
-
-                if ($mapMeta->placement_curver < 1 || $mapMeta->placement_curver > $mapCount) {
-                    $error = "Map's current version placement ({$mapMeta->placement_curver}) is out of valid range (1-{$mapCount}).";
-                }
-            }
-        } elseif ($formatId === FormatConstants::MAPLIST_ALL_VERSIONS) {
-            // MAPLIST_ALL_VERSIONS: placement_allver must be >= 1 and within map_count config
-            if ($mapMeta->placement_allver === null) {
-                $error = 'Map is not in the Maplist All Versions format.';
-            } else {
-                // Load map_count config for this format
-                $mapCount = Config::loadVars(['map_count'])->get('map_count');
-
-                if ($mapMeta->placement_allver < 1 || $mapMeta->placement_allver > $mapCount) {
-                    $error = "Map's all-time version placement ({$mapMeta->placement_allver}) is out of valid range (1-{$mapCount}).";
-                }
-            }
-        } elseif ($formatId === FormatConstants::EXPERT_LIST) {
-            // EXPERT_LIST: difficulty must not be null
-            if ($mapMeta->difficulty === null) {
-                $error = 'Map is not in the Expert List format.';
-            }
-        } elseif ($formatId === FormatConstants::BEST_OF_THE_BEST) {
-            // BEST_OF_THE_BEST: botb_difficulty must not be null
-            if ($mapMeta->botb_difficulty === null) {
-                $error = 'Map is not in the Best of the Best format.';
-            }
-        }
-
-        if ($error) {
-            return response()->json(['message' => $error], 422);
+        if (!$hasGlobalPermission && !$hasFormatPermission) {
+            return response()->json(['message' => 'Forbidden - You do not have permission to create completions for this format.'], 403);
         }
 
         return DB::transaction(function () use ($validated, $user, $now, $request) {
@@ -473,18 +417,15 @@ class CompletionController
 
             // Handle LCC - create new record if provided
             $lccId = null;
-            if (is_array($validated['lcc'])) {
+            if (isset($validated['lcc']) && is_array($validated['lcc'])) {
                 $lcc = LeastCostChimps::create([
                     'leftover' => $validated['lcc']['leftover'],
                 ]);
                 $lccId = $lcc->id;
             }
 
-            // Handle acceptance
-            $acceptedBy = null;
-            if ($validated['accept']) {
-                $acceptedBy = $user->discord_id;
-            }
+            // Auto-accept (admin-only endpoint)
+            $acceptedBy = $user->discord_id;
 
             // Create CompletionMeta
             $meta = CompletionMeta::create([
@@ -525,7 +466,7 @@ class CompletionController
      *         required=true,
      *         @OA\MediaType(
      *             mediaType="application/json",
-     *             @OA\Schema(ref="#/components/schemas/CompletionRequest")
+     *             @OA\Schema(ref="#/components/schemas/UpdateCompletionRequest")
      *         )
      *     ),
      *     @OA\Response(
@@ -537,7 +478,7 @@ class CompletionController
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
-    public function update(CompletionRequest $request, $id)
+    public function update(UpdateCompletionRequest $request, $id)
     {
         $now = Carbon::now();
         $user = auth()->guard('discord')->user();
@@ -572,6 +513,20 @@ class CompletionController
                 $missing[] = 'new format';
             }
             return response()->json(['message' => 'Forbidden - You do not have edit:completion permission for the ' . implode(' and ', $missing) . '.'], 403);
+        }
+
+        // Load existing players to check business rule
+        $existingMeta->load('players');
+        $existingPlayerIds = $existingMeta->players->pluck('discord_id')->toArray();
+
+        // Business rule: User cannot modify their own completion
+        if (in_array($user->discord_id, $existingPlayerIds)) {
+            return response()->json(['message' => 'You cannot modify your own completion.'], 403);
+        }
+
+        // Business rule: User cannot add themselves to the players list
+        if (in_array($user->discord_id, $validated['players'])) {
+            return response()->json(['message' => 'You cannot add yourself to the players list.'], 403);
         }
 
         return DB::transaction(function () use ($validated, $user, $now, $existingMeta) {
